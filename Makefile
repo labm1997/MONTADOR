@@ -9,7 +9,7 @@ INCDIR=inc
 CC=g++
 
 # Compiler flags
-CFLAGS=
+CFLAGS=-L $(INCDIR)
 
 # Get sources from source folder
 SOURCES=$(shell find $(SRCDIR) -name *.cpp)
@@ -23,6 +23,11 @@ BINARY=$(BINDIR)/montador
 # Rule to make linked binary, depends on all .o and on bin folder
 $(BINARY): $(OBJECTS) | $(BINDIR)
 	$(CC) $< -o $@ $(CFLAGS)
+
+install: $(BINARY)
+
+run: $(BINARY)
+	$(BINARY)
 
 # Add (if exists) dependency rules for each .o
 -include $(OBJECTS:.o=.d)
