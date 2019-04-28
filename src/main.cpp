@@ -47,8 +47,8 @@ list<Statement> getStatementList(ifstream *file){
 			else arg1.op = NONE;
 			arg2.op1 = lineMatch.str(6);
 			if(!lineMatch.str(7).empty() && !lineMatch.str(8).empty()){
-				arg1.op = SUM;
-				arg1.op2 = lineMatch.str(8);
+				arg2.op = SUM;
+				arg2.op2 = lineMatch.str(8);
 			}
 			else arg2.op = NONE;
 			statement.arg1 = arg1;
