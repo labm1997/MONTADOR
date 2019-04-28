@@ -27,7 +27,7 @@ typedef struct {
 } Statement;
 
 list<Statement> getStatementList(ifstream *file){
-	regex lineRegex("((\\w*):)?(\\s*(\\w*)(\\s*(\\w*)((\\+)(\\w*))?)?(,\\s*(\\w*)((\\+)(\\w*))?)?[^;]*)(;(.*))?");
+	regex lineRegex("(?:\\s|\\t)*(?:(\\w*):)?(?:(?:\\s|\\t)*(\\w*)(?:(?:\\s|\\t)*(\\w*)(?:(\\+)(\\w*))?)?(?:,(?:\\s|\\t)*(\\w*)(?:(\\+)(\\w*))?)?[^;]*)(?:;(.*))?");
 	list<Statement> statements;
 	smatch lineMatch;
 	string line;
@@ -37,23 +37,23 @@ list<Statement> getStatementList(ifstream *file){
 			Statement statement;
 			Expression arg1, arg2;
 			statement.line = line;
-			statement.label = lineMatch.str(2);
-			statement.op = lineMatch.str(4);
-			arg1.op1 = lineMatch.str(6);
-			if(!lineMatch.str(8).empty() && !lineMatch.str(9).empty()){
+			statement.label = lineMatch.str(1);
+			statement.op = lineMatch.str(2);
+			arg1.op1 = lineMatch.str(3);
+			if(!lineMatch.str(4).empty() && !lineMatch.str(5).empty()){
 				arg1.op = SUM;
-				arg1.op2 = lineMatch.str(9);
+				arg1.op2 = lineMatch.str(5);
 			}
 			else arg1.op = NONE;
-			arg2.op1 = lineMatch.str(11);
-			if(!lineMatch.str(13).empty() && !lineMatch.str(14).empty()){
+			arg2.op1 = lineMatch.str(6);
+			if(!lineMatch.str(7).empty() && !lineMatch.str(8).empty()){
 				arg1.op = SUM;
-				arg1.op2 = lineMatch.str(14);
+				arg1.op2 = lineMatch.str(8);
 			}
 			else arg2.op = NONE;
 			statement.arg1 = arg1;
 			statement.arg2 = arg2;
-			statement.comment = lineMatch.str(16);
+			statement.comment = lineMatch.str(9);
 			statements.push_back(statement);
 		}
 		else {
@@ -82,10 +82,10 @@ int main(int argc, char** argv) {
 		cout << "\tLabel: \"" << it->label << "\"\n";
 		cout << "\tOperation: \"" << it->op << "\"\n";
 		cout << "\tArg1_op1: \"" << it->arg1.op1 << "\"\n";
-		cout << "\tArg1_op: \"" << (it->arg1.op ? "SUM" : "NONE") << "\"\n";
+		cout << "\tArg1_op: " << (it->arg1.op ? "SUM" : "NONE") << "\n";
 		cout << "\tArg1_op2: \"" << it->arg1.op2 << "\"\n";
 		cout << "\tArg2_op1: \"" << it->arg2.op1 << "\"\n";
-		cout << "\tArg2_op: \"" << (it->arg2.op ? "SUM" : "NONE") << "\"\n";
+		cout << "\tArg2_op: " << (it->arg2.op ? "SUM" : "NONE") << "\n";
 		cout << "\tArg2_op2: \"" << it->arg2.op2 << "\"\n";
 		cout << "\tComment: \"" << it->comment << "\"\n";
 	}
