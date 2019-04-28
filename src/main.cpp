@@ -32,7 +32,7 @@ list<Statement> getStatementList(ifstream *file){
 	smatch lineMatch;
 	string line;
 
-	while(getline(*file, line)){
+	for(int lineNumber=0 ; getline(*file, line) ; lineNumber++){
 		if(regex_search(line, lineMatch, lineRegex)){
 			Statement statement;
 			Expression arg1, arg2;
@@ -54,6 +54,7 @@ list<Statement> getStatementList(ifstream *file){
 			statement.arg1 = arg1;
 			statement.arg2 = arg2;
 			statement.comment = lineMatch.str(9);
+			statement.lineNumber = lineNumber;
 			statements.push_back(statement);
 		}
 		else {
@@ -79,6 +80,7 @@ int main(int argc, char** argv) {
 	statements = getStatementList(&file);
 	for(auto it=statements.begin(); it!=statements.end() ; ++it){
 		cout << "Line: \"" << it->line << "\"\n";
+		cout << "\tLine Number: " << it->lineNumber << "\n";
 		cout << "\tLabel: \"" << it->label << "\"\n";
 		cout << "\tOperation: \"" << it->op << "\"\n";
 		cout << "\tArg1_op1: \"" << it->arg1.op1 << "\"\n";
