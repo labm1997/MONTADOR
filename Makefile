@@ -27,7 +27,7 @@ $(BINARY): $(OBJECTS) | $(BINDIR)
 install: $(BINARY)
 
 run: $(BINARY)
-	$(BINARY)
+	$(BINARY) test_files/bin.asm
 
 # Add (if exists) dependency rules for each .o
 -include $(OBJECTS:.o=.d)

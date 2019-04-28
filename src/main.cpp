@@ -1,15 +1,71 @@
 #include <iostream>
 #include <fstream>
 #include <regex>
+#include <list>
 
 using namespace std;
 
+typedef enum {
+	NONE,
+	SUM
+} operation;
+
+typedef struct {
+	string op1;
+	string op2;
+	operation op;
+} Expression;
+
+typedef struct {
+	string line;
+	string label;
+	string op;
+	Expression arg1;
+	Expression arg2;
+	string comment;
+	int lineNumber;
+} Statement;
+
+list<Statement> getStatementList(ifstream *file){
+	regex lineRegex("((\\w*):)?(\\s*(\\w*)(\\s*(\\w*)((\\+)(\\w*))?)?(,\\s*(\\w*)((\\+)(\\w*))?)?[^;]*)(;(.*))?");
+	list<Statement> statements;
+	smatch lineMatch;
+	string line;
+
+	while(getline(*file, line)){
+		if(regex_search(line, lineMatch, lineRegex)){
+			Statement statement;
+			Expression arg1, arg2;
+			statement.line = line;
+			statement.label = lineMatch.str(2);
+			statement.op = lineMatch.str(4);
+			arg1.op1 = lineMatch.str(6);
+			if(!lineMatch.str(8).empty() && !lineMatch.str(9).empty()){
+				arg1.op = SUM;
+				arg1.op2 = lineMatch.str(9);
+			}
+			else arg1.op = NONE;
+			arg2.op1 = lineMatch.str(11);
+			if(!lineMatch.str(13).empty() && !lineMatch.str(14).empty()){
+				arg1.op = SUM;
+				arg1.op2 = lineMatch.str(14);
+			}
+			else arg2.op = NONE;
+			statement.arg1 = arg1;
+			statement.arg2 = arg2;
+			statement.comment = lineMatch.str(16);
+			statements.push_back(statement);
+		}
+		else {
+			cout << "\tINVALID SYNTAX\n";
+		}
+	}
+	return statements;
+}
+
 int main(int argc, char** argv) {
 	ifstream file;
-	string line;
-	string comments;
-	regex lineRegex("((\\w*):)?(\\s*(\\w*)(\\s*(\\w*))?(,\\s*(\\w*))?[^;]*)(;(.*))?");
-	smatch lineMatch;
+	list<Statement> statements;
 	
 	if(argc < 2) {
 		cout << "Usage: ./" << argv[0] << " FILE\n";
@@ -20,18 +76,18 @@ int main(int argc, char** argv) {
 		cout << "Failed to open \"" << argv[1] << "\"\n";
 		return 1;
 	}
-	while(getline(file, line)){
-		cout << "Line: \"" << line << "\"\n";
-		if(regex_search(line, lineMatch, lineRegex)){
-			cout << "\tLabel: \"" << lineMatch.str(2) << "\"\n"; 
-			cout << "\tOperation: \"" << lineMatch.str(4) << "\"\n";
-			cout << "\tArg1: \"" << lineMatch.str(6) << "\"\n"; 
-			cout << "\tArg2: \"" << lineMatch.str(8) << "\"\n"; 
-			cout << "\tComment: \"" << lineMatch.str(10) << "\"\n"; 
-		}
-		else {
-			cout << "\tINVALID SYNTAX\n";
-		}
+	statements = getStatementList(&file);
+	for(auto it=statements.begin(); it!=statements.end() ; ++it){
+		cout << "Line: \"" << it->line << "\"\n";
+		cout << "\tLabel: \"" << it->label << "\"\n";
+		cout << "\tOperation: \"" << it->op << "\"\n";
+		cout << "\tArg1_op1: \"" << it->arg1.op1 << "\"\n";
+		cout << "\tArg1_op: \"" << (it->arg1.op ? "SUM" : "NONE") << "\"\n";
+		cout << "\tArg1_op2: \"" << it->arg1.op2 << "\"\n";
+		cout << "\tArg2_op1: \"" << it->arg2.op1 << "\"\n";
+		cout << "\tArg2_op: \"" << (it->arg2.op ? "SUM" : "NONE") << "\"\n";
+		cout << "\tArg2_op2: \"" << it->arg2.op2 << "\"\n";
+		cout << "\tComment: \"" << it->comment << "\"\n";
 	}
 	file.close();
 	return 0;
