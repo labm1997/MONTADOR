@@ -9,7 +9,7 @@ INCDIR=inc
 CC=g++
 
 # Compiler flags
-CFLAGS=-L $(INCDIR) -Wall
+CFLAGS=-L $(INCDIR) -Wall -g
 
 # Get sources from source folder
 SOURCES=$(shell find $(SRCDIR) -name *.cpp)
