@@ -10,13 +10,15 @@ typedef enum {
 	SUM
 } operation;
 
-typedef struct {
+class Expression {
+	public:
 	string op1;
 	string op2;
 	operation op;
-} Expression;
+};
 
-typedef struct {
+class Statement {
+	public:
 	string line;
 	string label;
 	string op;
@@ -24,7 +26,7 @@ typedef struct {
 	Expression arg2;
 	string comment;
 	int lineNumber;
-} Statement;
+};
 
 list<Statement> getStatementList(ifstream *file){
 	regex lineRegex("(?:\\s|\\t)*(?:(\\w*):)?(?:(?:\\s|\\t)*(\\w*)(?:(?:\\s|\\t)*(\\w*)(?:(\\+)(\\w*))?)?(?:,(?:\\s|\\t)*(\\w*)(?:(\\+)(\\w*))?)?[^;]*)(?:;(.*))?");
@@ -78,18 +80,18 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 	statements = getStatementList(&file);
-	for(auto it=statements.begin(); it!=statements.end() ; ++it){
-		cout << "Line: \"" << it->line << "\"\n";
-		cout << "\tLine Number: " << it->lineNumber << "\n";
-		cout << "\tLabel: \"" << it->label << "\"\n";
-		cout << "\tOperation: \"" << it->op << "\"\n";
-		cout << "\tArg1_op1: \"" << it->arg1.op1 << "\"\n";
-		cout << "\tArg1_op: " << (it->arg1.op ? "SUM" : "NONE") << "\n";
-		cout << "\tArg1_op2: \"" << it->arg1.op2 << "\"\n";
-		cout << "\tArg2_op1: \"" << it->arg2.op1 << "\"\n";
-		cout << "\tArg2_op: " << (it->arg2.op ? "SUM" : "NONE") << "\n";
-		cout << "\tArg2_op2: \"" << it->arg2.op2 << "\"\n";
-		cout << "\tComment: \"" << it->comment << "\"\n";
+	for(Statement &it: statements){
+		cout << "Line: \"" << it.line << "\"\n";
+		cout << "\tLine Number: " << it.lineNumber << "\n";
+		cout << "\tLabel: \"" << it.label << "\"\n";
+		cout << "\tOperation: \"" << it.op << "\"\n";
+		cout << "\tArg1_op1: \"" << it.arg1.op1 << "\"\n";
+		cout << "\tArg1_op: " << (it.arg1.op ? "SUM" : "NONE") << "\n";
+		cout << "\tArg1_op2: \"" << it.arg1.op2 << "\"\n";
+		cout << "\tArg2_op1: \"" << it.arg2.op1 << "\"\n";
+		cout << "\tArg2_op: " << (it.arg2.op ? "SUM" : "NONE") << "\n";
+		cout << "\tArg2_op2: \"" << it.arg2.op2 << "\"\n";
+		cout << "\tComment: \"" << it.comment << "\"\n";
 	}
 	file.close();
 	return 0;
