@@ -20,8 +20,22 @@ class MDT {
 };
 
 class PreProcessor {
+	private:
+	std::map<std::string, Symbol> ppts;
+	std::string macrolabel;
+	ppState state = NORMAL;
+	MDT mdt;
+	std::list<Statement> macroList;
+	std::map<std::string, MDT> ppMNT;
+	std::list<Statement> pptoRender;
 	public:
-	static std::list<Statement> renderStatements(std::list<Statement>);
+	void renderStatements(std::list<Statement>);
+	void dEQU(Statement);
+	void dMACRO(Statement);
+	void dMACROEXPAND(Statement);
+	void dENDMACRO(Statement);
+	void dAPPENDMACRO(Statement);
+	std::list<Statement> getResult();
 };
 
 #endif
