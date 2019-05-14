@@ -89,17 +89,25 @@ string strToLower(string data){
 }
 
 list<Statement> getStatementList(ifstream *file){
-	regex lineRegex("(?:\\s|\\t)*(?:(\\w*):)?(?:\\s|\\t)*(?:(\\w*):)?(?:\\s|\\t)*(?:(?:\\w*):)*(?:(?:\\s|\\t)*([^\\s|\\t|;]*)(?:(?:\\s|\\t)*(?:(?:\\+)?((?:-)?[^\\s|\\t|\\+|,|;]*))(?:\\s|\\t)*(?:(\\+)(?:\\s|\\t)*([^\\s|\\t|,|;]*))?)?(?:,(?:\\s|\\t)*([^\\s|\\t|\\+|,|;]*)(?:(\\+)([^\\s|\\t|,|;]*))?)?(?:,(?:\\s|\\t)*([^\\s|\\t|\\+|,|;]*)(?:(\\+)([^\\s|\\t|;]*))?)?[^;]*)(?:;(.*))?"); //!TODO: Macro's args should begin with &
+	//regex lineRegex("(?:\\s|\\t)*(?:(\\w*):)?(?:\\s|\\t)*(?:(\\w*):)?(?:\\s|\\t)*(?:(?:\\w*):)*(?:(?:\\s|\\t)*([^\\s|\\t|;]*)(?:(?:\\s|\\t)*(?:(?:\\+)?((?:-)?[^\\s|\\t|\\+|,|;]*))(?:\\s|\\t)*(?:(\\+)(?:\\s|\\t)*([^\\s|\\t|,|;]*))?)?(?:,(?:\\s|\\t)*([^\\s|\\t|\\+|,|;]*)(?:(\\+)([^\\s|\\t|,|;]*))?)?(?:,(?:\\s|\\t)*([^\\s|\\t|\\+|,|;]*)(?:(\\+)([^\\s|\\t|;]*))?)?[^;]*)(?:;(.*))?"); //!TODO: Macro's args should begin with &
 	
-	regex replaceTabs("\\t");
-	regex removeSpaces("(\\s){2,}");
-	regex removeInitialSpace("^(\\s)");
-	regex removeFinalSpace("(\\s)$");
-	regex removeSpaceNotBetweenWordsRight("([^\\w])(\\s)");
-	regex removeSpaceNotBetweenWordsLeft("(\\s)([^\\w])");
-	
+//	regex replaceTabs("\\t");
+//	regex removeSpaces("(\\s){2,}");
+//	regex removeInitialSpace("^(\\s)");
+//	regex removeFinalSpace("(\\s)$");
+//	regex removeSpaceNotBetweenWordsRight("([^\\w])(\\s)");
+//	regex removeSpaceNotBetweenWordsLeft("(\\s)([^\\w])");
+//	
+	string rejectSpaces = "(?:\\s|\\t)*";
 	string matchArgument = "(?:(?:\\+)?((?:-)?[^\\s|\\+|,|;]*))(?:(\\+)([^\\s|,|;]*))?";
-	regex matchStatement("(?:(\\w*):)?([^\\s||;])\\s" + matchArgument + "(?:," + matchArgument + ")?(?:," + matchArgument + ")?[^;]*(?:;(.*))?");
+	string matchLabel = rejectSpaces + "(?:(\\w*):)?" + rejectSpaces + "(?:(\\w*):)?" + rejectSpaces + "(?:(?:\\w*):)*" + rejectSpaces;
+	string matchOperation = "([^\\s|\\t|;]*)";
+	string matchFirstOp = rejectSpaces + "(?:(?:\\+)?((?:-)?[^\\s|\\t|\\+|,|;]*))" + rejectSpaces;
+	string matchArg1 = "(?:"  + matchFirstOp + "(?:(\\+)" + rejectSpaces + "([^\\s|\\t|,|;]*))?)?";
+	string matchArg2 = "(?:," + matchFirstOp + "(?:(\\+)" + rejectSpaces + "([^\\s|\\t|,|;]*))?)?";
+	string matchArg3 = "(?:," + matchFirstOp + "(?:(\\+)" + rejectSpaces + "([^\\s|\\t|;]*))?)?";
+	string matchRest = "[^;]*(?:;(.*))?";
+	regex matchStatement(matchLabel + matchOperation + matchArg1 + matchArg2 + matchArg3 + matchRest);
 	
 	list<Statement> statements;
 	smatch lineMatch;
@@ -108,11 +116,11 @@ list<Statement> getStatementList(ifstream *file){
 
 	for(int lineNumber=1 ; getline(*file, line) ; lineNumber++){
 	
-		semespacos = regex_replace(regex_replace(regex_replace(regex_replace(regex_replace(regex_replace(line, replaceTabs, " "), removeSpaces, " "), removeInitialSpace, ""), removeFinalSpace, ""), removeSpaceNotBetweenWordsRight, "$01"), removeSpaceNotBetweenWordsLeft, "$02");
+		//semespacos = regex_replace(regex_replace(regex_replace(regex_replace(regex_replace(regex_replace(line, replaceTabs, " "), removeSpaces, " "), removeInitialSpace, ""), removeFinalSpace, ""), removeSpaceNotBetweenWordsRight, "$01"), removeSpaceNotBetweenWordsLeft, "$02");
 		
 		//cout << "Sem espaços: \"" <<  semespacos << "\"\n";
 	
-		if(regex_search(line, lineMatch, lineRegex)){
+		if(regex_search(line, lineMatch, matchStatement)){
 			Statement statement;
 			Expression arg[3];
 			statement.line = line;
@@ -143,7 +151,7 @@ list<Statement> getStatementList(ifstream *file){
 			statement.arg[2] = arg[2];
 			statement.comment = lineMatch.str(13);
 			statement.lineNumber = lineNumber;
-			
+			statement.print();
 			statements.push_back(statement);
 		}
 		else {
