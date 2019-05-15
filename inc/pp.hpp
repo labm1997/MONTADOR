@@ -9,7 +9,8 @@
 
 typedef enum {
 	NORMAL, 
-	MACRO
+	MACRO,
+	IFFALSE
 } ppState;
 
 class MDT {
@@ -21,7 +22,7 @@ class MDT {
 
 class PreProcessor {
 	private:
-	std::map<std::string, Symbol> ppts;
+	SymbolTable ppts;
 	std::string macrolabel;
 	ppState state = NORMAL;
 	MDT mdt;
@@ -35,6 +36,8 @@ class PreProcessor {
 	void dMACROEXPAND(Statement);
 	void dENDMACRO(Statement);
 	void dAPPENDMACRO(Statement);
+	void dIF(Statement);
+	void dAPPEND(Statement);
 	std::list<Statement> getResult();
 };
 

@@ -6,44 +6,58 @@
 
 void PreProcessor::dEQU(Statement stmt){
 	int ok = 1;
+	long int value;
 	if(stmt.label.empty()){
-		std::cout << "Syntax Error: EQU requires a label on line " << stmt.lineNumber << "\n";
+		std::cout << "Syntax Error: EQU requires a label in line " << stmt.lineNumber << "\n";
 		ok = 0;
 	}
 	if(stmt.arg[0].op1.empty()){
-		std::cout << "Syntax Error: EQU requires one argument on line " << stmt.lineNumber << "\n";
+		std::cout << "Syntax Error: EQU requires one argument in line " << stmt.lineNumber << "\n";
+		ok = 0;
+	}
+	if(strToInt(stmt.arg[0].op1, &value) == ERROR){
+		std::cout << "Syntax Error: EQU requires integer argument in line " << stmt.lineNumber << "\n";
 		ok = 0;
 	}
 	if(ok){
 		Symbol ns;
 		ns.str = stmt.arg[0].op1;
-		this->ppts.insert(std::pair<std::string, Symbol>(stmt.label, ns));
+		ns.value = value;
+		this->ppts.insert(stmt.label, ns);
 	}
 }
 
 void PreProcessor::dMACRO(Statement stmt){
 	int ok = 1;
+	int nargs = stmt.countArgs();
 	if(stmt.label.empty()){
-		std::cout << "Syntax Error: MACRO requires a label on line " << stmt.lineNumber << "\n";
+		std::cout << "Syntax Error: MACRO requires a label in line " << stmt.lineNumber << "\n";
 		ok = 0;
 	}
 	if(stmt.arg[0].op != NONE || stmt.arg[1].op != NONE || stmt.arg[2].op != NONE){
-		std::cout << "Syntax Error: Sum expression can't be macro argument on line " << stmt.lineNumber << "\n";
+		std::cout << "Syntax Error: Sum expression can't be macro argument in line " << stmt.lineNumber << "\n";
 		ok = 0;
 	}
 	if(this->ppMNT.count(stmt.label) > 0){
-		std::cout << "Semantic Error: Macro " << stmt.label << " already defined. Redefined on line " << stmt.lineNumber << "\n";
+		std::cout << "Semantic Error: Macro " << stmt.label << " already defined. Redefined in line " << stmt.lineNumber << "\n";
 		ok = 0;
+	}
+	for(int i=0 ; i<nargs ; i++){
+		if(stmt.arg[i].op1[0] != '&'){
+			std::cout << "Lexical Error: expected & on token \"" << stmt.arg[i].op1[0] << "\", in line " << stmt.lineNumber << "\n";
+			ok = 0;
+		}
 	}
 	// !TODO: Detect number of arguments
 	if(ok){
-		this->mdt.nargs = stmt.countArgs();
+		this->mdt.nargs = nargs;
 		this->mdt.arg[0] = stmt.arg[0].op1;
 		this->mdt.arg[1] = stmt.arg[1].op1;
 		this->mdt.arg[2] = stmt.arg[2].op1;
 		this->macrolabel = stmt.label;
-		this->state = MACRO;
 	}
+	
+	this->state = MACRO;
 	
 }
 
@@ -51,15 +65,15 @@ void PreProcessor::dMACROEXPAND(Statement stmt){
 	int ok = 1;
 	this->mdt = this->ppMNT[stmt.op];
 	if(stmt.countArgs() != this->mdt.nargs){
-		std::cout << "Semantic Error: Macro " << stmt.op << " requires " << this->mdt.nargs << " arguments " << stmt.countArgs() << " given, on line " << stmt.lineNumber << "\n";
+		std::cout << "Semantic Error: Macro " << stmt.op << " requires " << this->mdt.nargs << " arguments " << stmt.countArgs() << " given, in line " << stmt.lineNumber << "\n";
 		ok = 0;
 	}
 	if(ok){
-		std::map<std::string,Symbol> macroMap;
+		SymbolTable macroMap;
 		for(int i=0 ; i<stmt.countArgs() ; i++){
 			Symbol toinsert;
 			toinsert.str = stmt.arg[i].op1;
-			macroMap.insert(std::pair<std::string,Symbol>(this->mdt.arg[i], toinsert));
+			macroMap.insert(this->mdt.arg[i], toinsert);
 		}
 		
 		for(Statement &it : mdt.lstmt){
@@ -81,23 +95,54 @@ void PreProcessor::dAPPENDMACRO(Statement stmt){
 	this->macroList.push_back(stmt);
 }
 
+void PreProcessor::dIF(Statement stmt){
+	int ok = 1;
+	if(stmt.countArgs() != 1){
+		std::cout << "Syntax Error: wrong number of arguments given for IF, " << stmt.countArgs() << " given but 1 required, in line " << stmt.lineNumber << "\n";
+		ok = 0;
+	}
+	if(!this->ppts.symbolExist(stmt.arg[0].op1)){
+		std::cout << "Semantic Error: Symbol \"" << stmt.arg[0].op1 << " not defined, you should define it with EQU before, in line " << stmt.lineNumber << "\n";
+		ok = 0;
+	}
+	if(ok){
+		if(this->ppts.getSymbol(stmt.arg[0].op1).value == 0){
+			this->state = IFFALSE;
+		}
+	}
+}
+
+void PreProcessor::dAPPEND(Statement stmt){
+	Statement a = stmt.subst(ppts);
+	this->pptoRender.push_back(a);
+}
+
 void PreProcessor::renderStatements(std::list<Statement> statements){
-	int ok;
 	
 	for(Statement &it: statements){
 		switch(state){
 			case NORMAL:
 				if(it.op == "equ") this->dEQU(it);
 				else if(it.op == "macro") this->dMACRO(it);
+				else if(it.op == "if") this->dIF(it);
 				else if(ppMNT.count(it.op) > 0) this->dMACROEXPAND(it);
+				else this->dAPPEND(it);
 			break;
 			
 			case MACRO:
 				if(it.op == "endmacro") this->dENDMACRO(it);
 				else this->dAPPENDMACRO(it);
 			break;
+			
+			case IFFALSE:
+				state = NORMAL;
+			break;
 		
 		}
+	}
+	
+	if(state == MACRO){
+		std::cout << "Sintax Error: Missing ENDMACRO directive\n";
 	}
 }
 

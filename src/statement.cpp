@@ -5,10 +5,41 @@
 #include <regex>
 #include <map>
 
+// !TODO: Don't put numbers on TS!!!!
+
+//eval_error eval(std::map<std::string, Symbol> ts, int *ret){
+//	int op1;
+//	error e = strToInt(this.op1, &op1);
+//}
 
 std::string strToLower(std::string data){
 	std::transform(data.begin(), data.end(), data.begin(), ::tolower);
 	return data;
+}
+
+error strToInt(std::string str, long int *ret){
+	char *c = (char *)str.c_str();
+	char *a = c;
+	bool hexa = false;
+	
+	if(*c == '-') c++;
+	// Hexa
+	if(*c == '0' && *(c+1) == 'x') {
+		hexa = true;
+		c = c+2;
+	}
+	
+	while(*c != '\0'){
+		if(!((*c >= '0' && *c <= '9') || (hexa && (*c >= 'a' && *c <= 'f')) ))
+			return ERROR;
+		c++;
+	}
+	
+	if(ret) {
+		*ret = hexa ? strtol(a, NULL, 16) : strtol(a, NULL, 10);
+	}
+	
+	return OK;
 }
 
 int Statement::countArgs(){
@@ -18,9 +49,9 @@ int Statement::countArgs(){
 	else return 3;
 }
 
-Statement Statement::subst(std::map<std::string, Symbol> toSubst){
+Statement Statement::subst(SymbolTable toSubst){
 	Statement ret = *this;
-	for(auto it = toSubst.begin() ; it != toSubst.end() ; it++){
+	for(auto it = toSubst.ts.begin() ; it != toSubst.ts.end() ; it++){
 		for(int i=0 ; i<3 ; i++){
 			if(ret.arg[i].op1 == it->first)
 				ret.arg[i].op1 = it->second.str;
@@ -50,7 +81,6 @@ void Statement::print(){
 
 std::list<Statement> Statement::getStatementList(std::ifstream *file){
 	std::string rejectSpaces = "(?:\\s|\\t)*";
-	std::string matchArgument = "(?:(?:\\+)?((?:-)?[^\\s|\\+|,|;]*))(?:(\\+)([^\\s|,|;]*))?";
 	std::string matchLabel = rejectSpaces + "(?:(\\w*):)?" + rejectSpaces + "(?:(\\w*):)?" + rejectSpaces + "(?:(?:\\w*):)*" + rejectSpaces;
 	std::string matchOperation = "([^\\s|\\t|;]*)";
 	std::string matchFirstOp = rejectSpaces + "(?:(?:\\+)?((?:-)?[^\\s|\\t|\\+|,|;]*))" + rejectSpaces;
@@ -71,6 +101,8 @@ std::list<Statement> Statement::getStatementList(std::ifstream *file){
 			Expression arg[3];
 			statement.line = line;
 			statement.label = strToLower(lineMatch.str(1));
+			if(!statement.label.empty() && strToInt(statement.label, NULL) == OK)
+				std::cout << "Syntax Error: Label is an integer in line " << lineNumber << "\n";
 			if(!lineMatch.str(2).empty()) 
 				std::cout << "Syntax Error: Multiple labels in the same statement in line " << lineNumber << "\n";
 			statement.op = strToLower(lineMatch.str(3));
@@ -105,4 +137,36 @@ std::list<Statement> Statement::getStatementList(std::ifstream *file){
 		}
 	}
 	return statements;
+}
+
+
+std::string Statement::renderStatementList(std::list<Statement> lstmt){
+	std::string out;
+	std::string lastLabel;
+	bool unusedLastLabel = false;
+	for(Statement &it : lstmt){
+		if(!it.label.empty()){
+			lastLabel = it.label;
+			out +=  it.label + ": ";
+			if(it.op.empty()) unusedLastLabel = true;
+		}
+		if(!it.op.empty()){
+			if(unusedLastLabel) {
+				unusedLastLabel = false;
+				out += lastLabel + ": ";
+			}
+			out += it.op;
+		}
+		for(int i=0 ; i<3 ; i++){
+			if(!it.arg[i].op1.empty()){
+				if(i != 0) out += ",";
+				out += " " + it.arg[i].op1;
+			}
+			if(it.arg[i].op == SUM && !it.arg[i].op2.empty()){
+				out += "+" + it.arg[i].op2;
+			}
+		}
+		out += "\n";
+	}
+	return out;
 }

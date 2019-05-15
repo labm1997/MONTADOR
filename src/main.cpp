@@ -17,6 +17,7 @@ int main(int argc, char** argv) {
 	list<Statement> ppStatements;
 	PreProcessor pp;
 	
+	
 	if(argc < 2) {
 		cout << "Usage: ./" << argv[0] << " FILE\n";
 		return 1;
@@ -36,8 +37,13 @@ int main(int argc, char** argv) {
 	ppStatements = pp.getResult();
 	
 	for(Statement &it: ppStatements){
-		it.print();
+		//it.print();
 	}
+	
+	ofstream ppfile;
+	ppfile.open("a.pre");
+	ppfile << Statement::renderStatementList(ppStatements);
+	ppfile.close();
 	
 	return 0;
 }
