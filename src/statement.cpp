@@ -147,8 +147,8 @@ std::string Statement::renderStatementList(std::list<Statement> lstmt){
 	for(Statement &it : lstmt){
 		if(!it.label.empty()){
 			lastLabel = it.label;
-			out +=  it.label + ": ";
 			if(it.op.empty()) unusedLastLabel = true;
+			else out +=  it.label + ": ";
 		}
 		if(!it.op.empty()){
 			if(unusedLastLabel) {
@@ -166,7 +166,7 @@ std::string Statement::renderStatementList(std::list<Statement> lstmt){
 				out += "+" + it.arg[i].op2;
 			}
 		}
-		out += "\n";
+		if(!it.op.empty()) out += "\n";
 	}
 	return out;
 }
