@@ -2,6 +2,11 @@
 #include "symbol.hpp"
 #include "statement.hpp"
 
+bool Symbol::checkLabel(std::string label){
+	// !TODO: Verify if begins with number
+	return strToInt(label, NULL) != OK;
+}
+
 void SymbolTable::insert(std::string label, Symbol s){
 	this->ts.insert(std::pair<std::string,Symbol>(label, s));
 }

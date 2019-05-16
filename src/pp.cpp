@@ -147,5 +147,28 @@ void PreProcessor::renderStatements(std::list<Statement> statements){
 }
 
 std::list<Statement> PreProcessor::getResult(){
-	return this->pptoRender;
+	bool unusedLastLabel = false;
+	std::list<Statement> lstmt;
+	std::string lastLabel;
+	for(Statement &it : this->pptoRender){
+		if(!it.label.empty()){
+			if(it.op.empty()) unusedLastLabel = true;
+			lastLabel = it.label;
+		}
+		if(!it.op.empty()){
+			if(unusedLastLabel){
+				if(it.label.empty()){
+					it.label = lastLabel;
+				}
+				else {
+					std::cout << "Semantic Error: Multiple labels for the same operation in line " << it.lineNumber << ", using \"" << it.label << "\"\n";
+				}
+				unusedLastLabel = false;
+			}
+			lstmt.push_back(it);
+		}
+	}
+	return lstmt;
 }
+
+

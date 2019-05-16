@@ -8,6 +8,7 @@
 #include "statement.hpp"
 #include "symbol.hpp"
 #include "pp.hpp"
+#include "Assembler.hpp"
 
 using namespace std;
 
@@ -16,6 +17,8 @@ int main(int argc, char** argv) {
 	list<Statement> statements;
 	list<Statement> ppStatements;
 	PreProcessor pp;
+	Assembler as;
+	SymbolTable as_symbols;
 	
 	
 	if(argc < 2) {
@@ -44,6 +47,9 @@ int main(int argc, char** argv) {
 	ppfile.open("a.pre");
 	ppfile << Statement::renderStatementList(ppStatements);
 	ppfile.close();
+	
+	
+	as.generateSymbolTable(ppStatements);
 	
 	return 0;
 }

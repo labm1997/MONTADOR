@@ -8,6 +8,7 @@ class Symbol {
 	public:
 	int value;
 	std::string str;
+	static bool checkLabel(std::string);
 };
 
 class SymbolTable {

@@ -101,7 +101,7 @@ std::list<Statement> Statement::getStatementList(std::ifstream *file){
 			Expression arg[3];
 			statement.line = line;
 			statement.label = strToLower(lineMatch.str(1));
-			if(!statement.label.empty() && strToInt(statement.label, NULL) == OK)
+			if(!statement.label.empty() && !Symbol::checkLabel(statement.label))
 				std::cout << "Syntax Error: Label is an integer in line " << lineNumber << "\n";
 			if(!lineMatch.str(2).empty()) 
 				std::cout << "Syntax Error: Multiple labels in the same statement in line " << lineNumber << "\n";
@@ -142,19 +142,11 @@ std::list<Statement> Statement::getStatementList(std::ifstream *file){
 
 std::string Statement::renderStatementList(std::list<Statement> lstmt){
 	std::string out;
-	std::string lastLabel;
-	bool unusedLastLabel = false;
 	for(Statement &it : lstmt){
 		if(!it.label.empty()){
-			lastLabel = it.label;
-			if(it.op.empty()) unusedLastLabel = true;
-			else out +=  it.label + ": ";
+			out +=  it.label + ": ";
 		}
 		if(!it.op.empty()){
-			if(unusedLastLabel) {
-				unusedLastLabel = false;
-				out += lastLabel + ": ";
-			}
 			out += it.op;
 		}
 		for(int i=0 ; i<3 ; i++){
@@ -166,7 +158,7 @@ std::string Statement::renderStatementList(std::list<Statement> lstmt){
 				out += "+" + it.arg[i].op2;
 			}
 		}
-		if(!it.op.empty()) out += "\n";
+		out += "\n";
 	}
 	return out;
 }
