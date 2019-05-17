@@ -7,6 +7,7 @@
 class Symbol {
 	public:
 	int value;
+	bool readOnly;
 	std::string str;
 	static bool checkLabel(std::string);
 };
@@ -17,6 +18,7 @@ class SymbolTable {
 	void insert(std::string, Symbol);
 	bool symbolExist(std::string);
 	Symbol getSymbol(std::string);
+	void print();
 };
 
 #endif

@@ -2,6 +2,13 @@
 #define HEADER_INSTRUCTION
 
 #include <string>
+#include <array>
+
+typedef enum {
+	READ,
+	WRITE,
+	NON
+} dataAccess;
 
 class Instruction {
 	public:
@@ -9,7 +16,10 @@ class Instruction {
 	int size;
 	int opcode;
 	int nargs;
-	Instruction(std::string, int, int, int);
+	bool accessData;
+	bool modifyData;
+	dataAccess access[3];
+	Instruction(std::string, int, int, int, std::initializer_list<dataAccess>);
 	Instruction() { };
 };
 

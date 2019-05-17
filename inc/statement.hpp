@@ -14,15 +14,31 @@ typedef enum {
 
 typedef enum {
 	OK,
-	ERROR
+	ERROR,
+	ERROR_EMPTY
 } error;
+
+typedef enum {
+	EVAL_UNARY_OK,
+	EVAL_UNARY_ERROR_CONVERTION,
+	EVAL_UNARY_ERROR_NOT_UNARY,
+	EVAL_UNARY_ERROR_EMPTY
+} error_evalUnary;
+
+typedef enum {
+	EVAL_OK,
+	EVAL_ERROR_CONVERTION,
+	EVAL_ERROR_EMPTY,
+	EVAL_ERROR_SYMBOL_NOT_FOUND
+} error_eval;
 
 class Expression {
 	public:
 	std::string op1;
 	std::string op2;
 	operation op;
-//	error eval(std::map<std::string, Symbol>, int *);
+	error_eval eval(SymbolTable, int *);
+	error_evalUnary evalUnary(long int *);
 };
 
 class Statement {

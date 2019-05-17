@@ -7,10 +7,39 @@
 
 // !TODO: Don't put numbers on TS!!!!
 
-//eval_error eval(std::map<std::string, Symbol> ts, int *ret){
-//	int op1;
-//	error e = strToInt(this.op1, &op1);
-//}
+error_eval Expression::eval(SymbolTable ts, int *ret){
+	long int v_op1;
+	long int v_op2 = 0;
+	error e = strToInt(op1, &v_op1);
+
+	if(e == ERROR_EMPTY) return EVAL_ERROR_EMPTY;
+
+	if(e == ERROR){
+		if(ts.symbolExist(op1)){
+			v_op1 = ts.getSymbol(op1).value;
+		}
+		else {
+			return EVAL_ERROR_SYMBOL_NOT_FOUND;
+		}
+	}
+
+	if(op != NONE){
+		e = strToInt(op2, &v_op2);
+		if(e != OK) return EVAL_ERROR_CONVERTION;
+	}
+
+	*ret = v_op1 + v_op2;
+	return EVAL_OK;
+}
+
+error_evalUnary Expression::evalUnary(long int *ret){
+	if(op != NONE){
+		return EVAL_UNARY_ERROR_NOT_UNARY;
+	}
+	if(op1.empty()) return EVAL_UNARY_ERROR_EMPTY;
+	if(strToInt(op1, ret) != OK) return EVAL_UNARY_ERROR_CONVERTION;
+	return EVAL_UNARY_OK;
+}
 
 std::string strToLower(std::string data){
 	std::transform(data.begin(), data.end(), data.begin(), ::tolower);
@@ -22,6 +51,8 @@ error strToInt(std::string str, long int *ret){
 	char *a = c;
 	bool hexa = false;
 	
+	if(*c == '\0') return ERROR_EMPTY;
+
 	if(*c == '-') c++;
 	// Hexa
 	if(*c == '0' && *(c+1) == 'x') {
@@ -86,9 +117,10 @@ std::list<Statement> Statement::getStatementList(std::ifstream *file){
 	std::string matchFirstOp = rejectSpaces + "(?:(?:\\+)?((?:-)?[^\\s|\\t|\\+|,|;]*))" + rejectSpaces;
 	std::string matchArg1 = "(?:"  + matchFirstOp + "(?:(\\+)" + rejectSpaces + "([^\\s|\\t|,|;]*))?)?";
 	std::string matchArg2 = "(?:," + matchFirstOp + "(?:(\\+)" + rejectSpaces + "([^\\s|\\t|,|;]*))?)?";
-	std::string matchArg3 = "(?:," + matchFirstOp + "(?:(\\+)" + rejectSpaces + "([^\\s|\\t|;]*))?)?";
+	std::string matchArg3 = "(?:," + matchFirstOp + "(?:(\\+)" + rejectSpaces + "([^\\s|\\t|,|;]*))?)?";
+	std::string matchArgx = "(?:," + matchFirstOp + "(?:(\\+)" + rejectSpaces + "([^\\s|\\t|;]*))?)?";
 	std::string matchRest = "[^;]*(?:;(.*))?";
-	std::regex matchStatement(matchLabel + matchOperation + matchArg1 + matchArg2 + matchArg3 + matchRest);
+	std::regex matchStatement(matchLabel + matchOperation + matchArg1 + matchArg2 + matchArg3 + matchArgx + matchRest);
 	
 	std::list<Statement> statements;
 	std::smatch lineMatch;
@@ -102,32 +134,52 @@ std::list<Statement> Statement::getStatementList(std::ifstream *file){
 			statement.line = line;
 			statement.label = strToLower(lineMatch.str(1));
 			if(!statement.label.empty() && !Symbol::checkLabel(statement.label))
-				std::cout << "Syntax Error: Label is an integer in line " << lineNumber << "\n";
+				std::cout << "Syntax Error: Invalid label in line " << lineNumber << "\n";
 			if(!lineMatch.str(2).empty()) 
 				std::cout << "Syntax Error: Multiple labels in the same statement in line " << lineNumber << "\n";
 			statement.op = strToLower(lineMatch.str(3));
 			arg[0].op1 = strToLower(lineMatch.str(4));
-			if(!lineMatch.str(5).empty() && !lineMatch.str(6).empty()){
-				arg[0].op = SUM;
-				arg[0].op2 = strToLower(lineMatch.str(6));
+			if(!lineMatch.str(5).empty()){
+				if(lineMatch.str(6).empty()){
+					std::cout << "Syntax Error: Missing second argument after + operator, in line " << lineNumber << "\n";
+				}
+				else {
+					arg[0].op = SUM;
+					arg[0].op2 = strToLower(lineMatch.str(6));
+				}
 			}
 			else arg[0].op = NONE;
 			arg[1].op1 = strToLower(lineMatch.str(7));
-			if(!lineMatch.str(8).empty() && !lineMatch.str(9).empty()){
-				arg[1].op = SUM;
-				arg[1].op2 = strToLower(lineMatch.str(9));
+			if(!lineMatch.str(8).empty()){
+				if(lineMatch.str(9).empty()){
+					std::cout << "Syntax Error: Missing second argument after + operator, in line " << lineNumber << "\n";
+				}
+				else {
+					arg[1].op = SUM;
+					arg[1].op2 = strToLower(lineMatch.str(9));
+				}
 			}
 			else arg[1].op = NONE;
 			arg[2].op1 = strToLower(lineMatch.str(10));
-			if(!lineMatch.str(11).empty() && !lineMatch.str(12).empty()){
-				arg[2].op = SUM;
-				arg[2].op2 = strToLower(lineMatch.str(12));
+			if(!lineMatch.str(11).empty()){
+				if(lineMatch.str(12).empty()){
+					std::cout << "Syntax Error: Missing second argument after + operator, in line " << lineNumber << "\n";
+				}
+				else {
+					arg[2].op = SUM;
+					arg[2].op2 = strToLower(lineMatch.str(12));
+				}
 			}
 			else arg[2].op = NONE;
 			statement.arg[0] = arg[0];
 			statement.arg[1] = arg[1];
 			statement.arg[2] = arg[2];
-			statement.comment = lineMatch.str(13);
+
+			if(!lineMatch.str(13).empty()){
+				std::cout << "Syntax Error: Assembler do not support more than 3 arguments, reading only 3, in line " << lineNumber << "\n";
+			}
+
+			statement.comment = lineMatch.str(16);
 			statement.lineNumber = lineNumber;
 			//statement.print();
 			statements.push_back(statement);

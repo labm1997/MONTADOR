@@ -3,7 +3,11 @@
 #include "statement.hpp"
 
 bool Symbol::checkLabel(std::string label){
-	// !TODO: Verify if begins with number
+
+	if(label[0] >= '0' && label[0] <= '9'){
+		return false;
+	}
+
 	return strToInt(label, NULL) != OK;
 }
 
@@ -17,4 +21,10 @@ bool SymbolTable::symbolExist(std::string label){
 
 Symbol SymbolTable::getSymbol(std::string label){
 	return this->ts[label];
+}
+
+void SymbolTable::print(){
+	for(auto it = this->ts.begin() ; it != this->ts.end() ; it++){
+		std::cout << it->first << ": " << it->second.value << "\n";
+	}
 }

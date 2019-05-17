@@ -130,7 +130,7 @@ void PreProcessor::renderStatements(std::list<Statement> statements){
 			break;
 			
 			case MACRO:
-				if(it.op == "endmacro") this->dENDMACRO(it);
+				if(it.op == "end") this->dENDMACRO(it);
 				else this->dAPPENDMACRO(it);
 			break;
 			
@@ -170,5 +170,4 @@ std::list<Statement> PreProcessor::getResult(){
 	}
 	return lstmt;
 }
-
 
