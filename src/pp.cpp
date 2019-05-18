@@ -141,12 +141,18 @@ void PreProcessor::renderStatements(std::list<Statement> statements){
 				if(it.op == "equ") this->dEQU(it);
 				else if(it.op == "macro") this->dMACRO(it);
 				else if(it.op == "if") this->dIF(it);
+				else if(it.op == "end") {
+					std::cout << "PreProcessor Semantic Error: END without MACRO being declared previously\n";
+				}
 				else if(ppMNT.count(it.op) > 0) this->dMACROEXPAND(it);
 				else this->dAPPEND(it);
 			break;
 			
 			case MACRO:
-				if(it.op == "end") this->dENDMACRO(it);
+				if(it.op == "equ" || it.op == "macro" || it.op == "if"){
+					std::cout << "PreProcessor Semantic Error: \"" << it.op << "\" not supported inside macro definition\n";
+				}
+				else if(it.op == "end") this->dENDMACRO(it);
 				else this->dAPPENDMACRO(it);
 			break;
 			
