@@ -4,6 +4,7 @@
 #include <string>
 #include <regex>
 #include <map>
+#include "log.hpp"
 
 // !TODO: Don't put numbers on TS!!!!
 
@@ -133,14 +134,17 @@ std::list<Statement> Statement::getStatementList(std::ifstream *file){
 			statement.line = line;
 			statement.label = strToLower(lineMatch.str(1));
 			if(!statement.label.empty() && !Symbol::checkLabel(statement.label))
-				std::cout << "Syntax Error: Invalid label in line " << lineNumber << "\n";
+				logparserSyntaxError("Invalid label \"" + statement.label + "\"", lineNumber);
+				//std::cout << "Syntax Error: Invalid label in line " << lineNumber << "\n";
 			if(!lineMatch.str(2).empty()) 
-				std::cout << "Syntax Error: Multiple labels in the same statement in line " << lineNumber << "\n";
+				logparserSyntaxError("Multiple labels in the same statement", lineNumber);
+				//std::cout << "Syntax Error: Multiple labels in the same statement in line " << lineNumber << "\n";
 			statement.op = strToLower(lineMatch.str(3));
 			arg[0].op1 = strToLower(lineMatch.str(4));
 			if(!lineMatch.str(5).empty()){
 				if(lineMatch.str(6).empty()){
-					std::cout << "Syntax Error: Missing second argument after + operator, in line " << lineNumber << "\n";
+					logparserSyntaxError("Missing second argument after + operator", lineNumber);
+					//std::cout << "Syntax Error: Missing second argument after + operator, in line " << lineNumber << "\n";
 				}
 				else {
 					arg[0].op = SUM;
@@ -151,7 +155,8 @@ std::list<Statement> Statement::getStatementList(std::ifstream *file){
 			arg[1].op1 = strToLower(lineMatch.str(7));
 			if(!lineMatch.str(8).empty()){
 				if(lineMatch.str(9).empty()){
-					std::cout << "Syntax Error: Missing second argument after + operator, in line " << lineNumber << "\n";
+					logparserSyntaxError("Missing second argument after + operator", lineNumber);
+					//std::cout << "Syntax Error: Missing second argument after + operator, in line " << lineNumber << "\n";
 				}
 				else {
 					arg[1].op = SUM;
@@ -162,7 +167,8 @@ std::list<Statement> Statement::getStatementList(std::ifstream *file){
 			arg[2].op1 = strToLower(lineMatch.str(10));
 			if(!lineMatch.str(11).empty()){
 				if(lineMatch.str(12).empty()){
-					std::cout << "Syntax Error: Missing second argument after + operator, in line " << lineNumber << "\n";
+					logparserSyntaxError("Missing second argument after + operator", lineNumber);
+					//std::cout << "Syntax Error: Missing second argument after + operator, in line " << lineNumber << "\n";
 				}
 				else {
 					arg[2].op = SUM;
@@ -175,7 +181,8 @@ std::list<Statement> Statement::getStatementList(std::ifstream *file){
 			statement.arg[2] = arg[2];
 
 			if(!lineMatch.str(13).empty()){
-				std::cout << "Syntax Error: Unexpected content \"" << lineMatch.str(13) << "\", in line " << lineNumber << "\n";
+				logparserSyntaxError("Unexpected content \"" + lineMatch.str(13) + "\"", lineNumber);
+				//std::cout << "Syntax Error: Unexpected content \"" << lineMatch.str(13) << "\", in line " << lineNumber << "\n";
 			}
 
 			statement.comment = lineMatch.str(14);

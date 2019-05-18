@@ -3,20 +3,21 @@
 #include "pp.hpp"
 #include "statement.hpp"
 #include "symbol.hpp"
+#include "log.hpp"
 
 void PreProcessor::dEQU(Statement stmt){
 	int ok = 1;
 	long int value;
 	if(stmt.label.empty()){
-		std::cout << "PreProcessor Syntax Error: EQU requires a label in line " << stmt.lineNumber << "\n";
+		logppSyntaxError("EQU requires a label", stmt.lineNumber);
 		ok = 0;
 	}
 	if(stmt.arg[0].op1.empty()){
-		std::cout << "PreProcessor Syntax Error: EQU requires one argument in line " << stmt.lineNumber << "\n";
+		logppSyntaxError("EQU requires one argument", stmt.lineNumber);
 		ok = 0;
 	}
 	if(strToInt(stmt.arg[0].op1, &value) == ERROR){
-		std::cout << "PreProcessor Syntax Error: EQU requires integer argument in line " << stmt.lineNumber << "\n";
+		logppSyntaxError("EQU requires integer argument", stmt.lineNumber);
 		ok = 0;
 	}
 	if(ok){
@@ -31,20 +32,22 @@ void PreProcessor::dMACRO(Statement stmt){
 	int ok = 1;
 	int nargs = stmt.countArgs();
 	if(stmt.label.empty()){
-		std::cout << "PreProcessor Syntax Error: MACRO requires a label in line " << stmt.lineNumber << "\n";
+		logppSyntaxError("MACRO requires a label", stmt.lineNumber);
 		ok = 0;
 	}
 	if(stmt.arg[0].op != NONE || stmt.arg[1].op != NONE || stmt.arg[2].op != NONE){
-		std::cout << "PreProcessor Syntax Error: Sum expression can't be macro argument in line " << stmt.lineNumber << "\n";
+		logppSyntaxError("Sum expression can't be macro argument", stmt.lineNumber);
 		ok = 0;
 	}
 	if(this->ppMNT.count(stmt.label) > 0){
-		std::cout << "PreProcessor Semantic Error: Macro " << stmt.label << " already defined. Redefined in line " << stmt.lineNumber << "\n";
+		logppSemanticError("Macro " + stmt.label + " already defined", stmt.lineNumber);
+		//std::cout << "PreProcessor Semantic Error: Macro " << stmt.label << " already defined. Redefined in line " << stmt.lineNumber << "\n";
 		ok = 0;
 	}
 	for(int i=0 ; i<nargs ; i++){
 		if(stmt.arg[i].op1[0] != '&'){
-			std::cout << "PreProcessor Lexical Error: expected & on token \"" << stmt.arg[i].op1[0] << "\", in line " << stmt.lineNumber << "\n";
+			logppLexicalError("expected & on token \"" + std::to_string(stmt.arg[i].op1[0]) + "\"", stmt.lineNumber);
+			//std::cout << "PreProcessor Lexical Error: expected & on token \"" << stmt.arg[i].op1[0] << "\", in line " << stmt.lineNumber << "\n";
 			ok = 0;
 		}
 	}
@@ -65,7 +68,8 @@ void PreProcessor::dMACROEXPAND(Statement stmt){
 	int ok = 1;
 	this->mdt = this->ppMNT[stmt.op];
 	if(stmt.countArgs() != this->mdt.nargs){
-		std::cout << "PreProcessor Semantic Error: Macro " << stmt.op << " requires " << this->mdt.nargs << " arguments " << stmt.countArgs() << " given, in line " << stmt.lineNumber << "\n";
+		logppSemanticError("Macro " + stmt.op + " requires " + std::to_string(this->mdt.nargs) + " arguments " + std::to_string(stmt.countArgs()) + " given", stmt.lineNumber);
+		//std::cout << "PreProcessor Semantic Error: Macro " << stmt.op << " requires " << this->mdt.nargs << " arguments " << stmt.countArgs() << " given, in line " << stmt.lineNumber << "\n";
 		ok = 0;
 	}
 	if(ok){
@@ -100,11 +104,12 @@ void PreProcessor::dAPPENDMACRO(Statement stmt){
 void PreProcessor::dIF(Statement stmt){
 	int ok = 1;
 	if(stmt.countArgs() != 1){
-		std::cout << "PreProcessor Syntax Error: wrong number of arguments given for IF, " << stmt.countArgs() << " given but 1 required, in line " << stmt.lineNumber << "\n";
+		logppSyntaxError("wrong number of arguments given for IF, " + std::to_string(stmt.countArgs()) + " given but 1 required,", stmt.lineNumber);
 		ok = 0;
 	}
 	if(!this->ppts.symbolExist(stmt.arg[0].op1)){
-		std::cout << "PreProcessor Semantic Error: Symbol \"" << stmt.arg[0].op1 << " not defined, you should define it with EQU before, in line " << stmt.lineNumber << "\n";
+		logppSemanticError("Symbol \"" + stmt.arg[0].op1 + " not defined, you should define it with EQU before", stmt.lineNumber);
+		//std::cout << "PreProcessor Semantic Error: Symbol \"" << stmt.arg[0].op1 << " not defined, you should define it with EQU before, in line " << stmt.lineNumber << "\n";
 		ok = 0;
 	}
 	if(ok){
@@ -128,7 +133,8 @@ void PreProcessor::renderStatements(std::list<Statement> statements){
 		// Add empty symbol to vts table, only to see if there's redefined symbol
 		if(!it.label.empty()){
 			if(vts.symbolExist(it.label)){
-				std::cout << "PreProcessor Semantic Error: Symbol \"" << it.label << "\" redefined, in line " << it.lineNumber << "\n";
+				logppSemanticError("Symbol \"" + it.label + "\" redefined", it.lineNumber);
+				//std::cout << "PreProcessor Semantic Error: Symbol \"" << it.label << "\" redefined, in line " << it.lineNumber << "\n";
 			}
 			else {
 				Symbol ns;
@@ -142,20 +148,22 @@ void PreProcessor::renderStatements(std::list<Statement> statements){
 				else if(it.op == "macro") this->dMACRO(it);
 				else if(it.op == "if") this->dIF(it);
 				else if(it.op == "end") {
-					std::cout << "PreProcessor Semantic Error: END without MACRO being declared previously\n";
+					logppSemanticError("END without MACRO being declared previously", it.lineNumber);
+					//std::cout << "PreProcessor Semantic Error: END without MACRO being declared previously\n";
 				}
 				else if(ppMNT.count(it.op) > 0) this->dMACROEXPAND(it);
 				else this->dAPPEND(it);
 			break;
-			
+
 			case MACRO:
 				if(it.op == "equ" || it.op == "macro" || it.op == "if"){
-					std::cout << "PreProcessor Semantic Error: \"" << it.op << "\" not supported inside macro definition\n";
+					logppSemanticError("\"" + it.op + "\" not supported inside macro definition", it.lineNumber);
+					//std::cout << "PreProcessor Semantic Error: \"" << it.op << "\" not supported inside macro definition\n";
 				}
 				else if(it.op == "end") this->dENDMACRO(it);
 				else this->dAPPENDMACRO(it);
 			break;
-			
+
 			case IFFALSE:
 				state = NORMAL;
 			break;
@@ -164,7 +172,8 @@ void PreProcessor::renderStatements(std::list<Statement> statements){
 	}
 	
 	if(state == MACRO){
-		std::cout << "PreProcessor Sintax Error: Missing END directive\n";
+		logppSemanticError("Missing END directive");
+		//std::cout << "PreProcessor Sintax Error: Missing END directive\n";
 	}
 }
 
@@ -183,7 +192,8 @@ std::list<Statement> PreProcessor::getResult(){
 					it.label = lastLabel;
 				}
 				else {
-					std::cout << "PreProcessor Semantic Error: Multiple labels for the same operation in line " << it.lineNumber << ", using \"" << it.label << "\"\n";
+					logppSemanticError("Multiple labels for the same operation, using \"" + it.label + "\"", it.lineNumber);
+					//std::cout << "PreProcessor Semantic Error: Multiple labels for the same operation in line,  using \"" << it.label << "\"\n";
 				}
 				unusedLastLabel = false;
 			}
