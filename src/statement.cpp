@@ -113,14 +113,13 @@ void Statement::print(){
 std::list<Statement> Statement::getStatementList(std::ifstream *file){
 	std::string rejectSpaces = "(?:\\s|\\t)*";
 	std::string matchLabel = rejectSpaces + "(?:(\\w*):)?" + rejectSpaces + "(?:(\\w*):)?" + rejectSpaces + "(?:(?:\\w*):)*" + rejectSpaces;
-	std::string matchOperation = "([^\\s|\\t|;]*)";
-	std::string matchFirstOp = rejectSpaces + "(?:(?:\\+)?((?:-)?[^\\s|\\t|\\+|,|;]*))" + rejectSpaces;
-	std::string matchArg1 = "(?:"  + matchFirstOp + "(?:(\\+)" + rejectSpaces + "([^\\s|\\t|,|;]*))?)?";
-	std::string matchArg2 = "(?:," + matchFirstOp + "(?:(\\+)" + rejectSpaces + "([^\\s|\\t|,|;]*))?)?";
-	std::string matchArg3 = "(?:," + matchFirstOp + "(?:(\\+)" + rejectSpaces + "([^\\s|\\t|,|;]*))?)?";
-	std::string matchArgx = "(?:," + matchFirstOp + "(?:(\\+)" + rejectSpaces + "([^\\s|\\t|;]*))?)?";
-	std::string matchRest = "[^;]*(?:;(.*))?";
-	std::regex matchStatement(matchLabel + matchOperation + matchArg1 + matchArg2 + matchArg3 + matchArgx + matchRest);
+	std::string matchOperation = "([\\w|&]*)";
+	std::string matchFirstOp = rejectSpaces + "(?:(?:\\+)?((?:-)?[\\w|&]*))" + rejectSpaces;
+	std::string matchArg1 = "(?:"  + matchFirstOp + "(?:(\\+)" + rejectSpaces + "([\\w|&]*))?)?" + rejectSpaces;
+	std::string matchArg2 = "(?:," + matchFirstOp + "(?:(\\+)" + rejectSpaces + "([\\w|&]*))?)?" + rejectSpaces;
+	std::string matchArg3 = "(?:," + matchFirstOp + "(?:(\\+)" + rejectSpaces + "([\\w|&]*))?)?" + rejectSpaces;
+	std::string matchRest = "([^;]*)(?:;(.*))?";
+	std::regex matchStatement(matchLabel + matchOperation + matchArg1 + matchArg2 + matchArg3 + matchRest);
 	
 	std::list<Statement> statements;
 	std::smatch lineMatch;
@@ -176,11 +175,12 @@ std::list<Statement> Statement::getStatementList(std::ifstream *file){
 			statement.arg[2] = arg[2];
 
 			if(!lineMatch.str(13).empty()){
-				std::cout << "Syntax Error: Assembler do not support more than 3 arguments, reading only 3, in line " << lineNumber << "\n";
+				std::cout << "Syntax Error: Unexpected content \"" << lineMatch.str(13) << "\", in line " << lineNumber << "\n";
 			}
 
-			statement.comment = lineMatch.str(16);
+			statement.comment = lineMatch.str(14);
 			statement.lineNumber = lineNumber;
+			statement.lineDefinition = lineNumber;
 			//statement.print();
 			statements.push_back(statement);
 		}

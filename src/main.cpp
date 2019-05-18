@@ -31,17 +31,17 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 	statements = Statement::getStatementList(&file);
-//	for(Statement &it: statements){
-//		it.print();
-//	}
+	// for(Statement &it: statements){
+	// 	it.print();
+	// }
 	file.close();
 	
 	pp.renderStatements(statements);
 	ppStatements = pp.getResult();
 	
-	for(Statement &it: ppStatements){
-		//it.print();
-	}
+	// for(Statement &it: ppStatements){
+	// 	it.print();
+	// }
 	
 	string fileName = argv[1];
 	size_t position = fileName.find(".");

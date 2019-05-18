@@ -5,7 +5,7 @@ Instruction::Instruction(std::string _mne, int _opcode, int _size, int _nargs, s
 	opcode = _opcode;
 	size = _size;
 	nargs = _nargs;
-	int i=0;
+	// int i=0;
 	// for(const dataAccess *it = _access.begin(); it != _access.end() ; ++it, i++){
 	// 	access[i] = *it;
 	// }

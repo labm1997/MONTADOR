@@ -8,15 +8,15 @@ void PreProcessor::dEQU(Statement stmt){
 	int ok = 1;
 	long int value;
 	if(stmt.label.empty()){
-		std::cout << "Syntax Error: EQU requires a label in line " << stmt.lineNumber << "\n";
+		std::cout << "PreProcessor Syntax Error: EQU requires a label in line " << stmt.lineNumber << "\n";
 		ok = 0;
 	}
 	if(stmt.arg[0].op1.empty()){
-		std::cout << "Syntax Error: EQU requires one argument in line " << stmt.lineNumber << "\n";
+		std::cout << "PreProcessor Syntax Error: EQU requires one argument in line " << stmt.lineNumber << "\n";
 		ok = 0;
 	}
 	if(strToInt(stmt.arg[0].op1, &value) == ERROR){
-		std::cout << "Syntax Error: EQU requires integer argument in line " << stmt.lineNumber << "\n";
+		std::cout << "PreProcessor Syntax Error: EQU requires integer argument in line " << stmt.lineNumber << "\n";
 		ok = 0;
 	}
 	if(ok){
@@ -31,20 +31,20 @@ void PreProcessor::dMACRO(Statement stmt){
 	int ok = 1;
 	int nargs = stmt.countArgs();
 	if(stmt.label.empty()){
-		std::cout << "Syntax Error: MACRO requires a label in line " << stmt.lineNumber << "\n";
+		std::cout << "PreProcessor Syntax Error: MACRO requires a label in line " << stmt.lineNumber << "\n";
 		ok = 0;
 	}
 	if(stmt.arg[0].op != NONE || stmt.arg[1].op != NONE || stmt.arg[2].op != NONE){
-		std::cout << "Syntax Error: Sum expression can't be macro argument in line " << stmt.lineNumber << "\n";
+		std::cout << "PreProcessor Syntax Error: Sum expression can't be macro argument in line " << stmt.lineNumber << "\n";
 		ok = 0;
 	}
 	if(this->ppMNT.count(stmt.label) > 0){
-		std::cout << "Semantic Error: Macro " << stmt.label << " already defined. Redefined in line " << stmt.lineNumber << "\n";
+		std::cout << "PreProcessor Semantic Error: Macro " << stmt.label << " already defined. Redefined in line " << stmt.lineNumber << "\n";
 		ok = 0;
 	}
 	for(int i=0 ; i<nargs ; i++){
 		if(stmt.arg[i].op1[0] != '&'){
-			std::cout << "Lexical Error: expected & on token \"" << stmt.arg[i].op1[0] << "\", in line " << stmt.lineNumber << "\n";
+			std::cout << "PreProcessor Lexical Error: expected & on token \"" << stmt.arg[i].op1[0] << "\", in line " << stmt.lineNumber << "\n";
 			ok = 0;
 		}
 	}
@@ -65,7 +65,7 @@ void PreProcessor::dMACROEXPAND(Statement stmt){
 	int ok = 1;
 	this->mdt = this->ppMNT[stmt.op];
 	if(stmt.countArgs() != this->mdt.nargs){
-		std::cout << "Semantic Error: Macro " << stmt.op << " requires " << this->mdt.nargs << " arguments " << stmt.countArgs() << " given, in line " << stmt.lineNumber << "\n";
+		std::cout << "PreProcessor Semantic Error: Macro " << stmt.op << " requires " << this->mdt.nargs << " arguments " << stmt.countArgs() << " given, in line " << stmt.lineNumber << "\n";
 		ok = 0;
 	}
 	if(ok){
@@ -78,6 +78,8 @@ void PreProcessor::dMACROEXPAND(Statement stmt){
 		
 		for(Statement &it : mdt.lstmt){
 			Statement a = it.subst(macroMap).subst(ppts);
+			a.lineDefinition = it.lineNumber;
+			a.lineNumber = stmt.lineNumber;
 			this->pptoRender.push_back(a);
 			//a.print();
 		}
@@ -98,11 +100,11 @@ void PreProcessor::dAPPENDMACRO(Statement stmt){
 void PreProcessor::dIF(Statement stmt){
 	int ok = 1;
 	if(stmt.countArgs() != 1){
-		std::cout << "Syntax Error: wrong number of arguments given for IF, " << stmt.countArgs() << " given but 1 required, in line " << stmt.lineNumber << "\n";
+		std::cout << "PreProcessor Syntax Error: wrong number of arguments given for IF, " << stmt.countArgs() << " given but 1 required, in line " << stmt.lineNumber << "\n";
 		ok = 0;
 	}
 	if(!this->ppts.symbolExist(stmt.arg[0].op1)){
-		std::cout << "Semantic Error: Symbol \"" << stmt.arg[0].op1 << " not defined, you should define it with EQU before, in line " << stmt.lineNumber << "\n";
+		std::cout << "PreProcessor Semantic Error: Symbol \"" << stmt.arg[0].op1 << " not defined, you should define it with EQU before, in line " << stmt.lineNumber << "\n";
 		ok = 0;
 	}
 	if(ok){
@@ -142,7 +144,7 @@ void PreProcessor::renderStatements(std::list<Statement> statements){
 	}
 	
 	if(state == MACRO){
-		std::cout << "Sintax Error: Missing ENDMACRO directive\n";
+		std::cout << "PreProcessor Sintax Error: Missing ENDMACRO directive\n";
 	}
 }
 
@@ -161,7 +163,7 @@ std::list<Statement> PreProcessor::getResult(){
 					it.label = lastLabel;
 				}
 				else {
-					std::cout << "Semantic Error: Multiple labels for the same operation in line " << it.lineNumber << ", using \"" << it.label << "\"\n";
+					std::cout << "PreProcessor Semantic Error: Multiple labels for the same operation in line " << it.lineNumber << ", using \"" << it.label << "\"\n";
 				}
 				unusedLastLabel = false;
 			}
@@ -170,4 +172,3 @@ std::list<Statement> PreProcessor::getResult(){
 	}
 	return lstmt;
 }
-

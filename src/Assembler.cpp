@@ -6,6 +6,22 @@
 #include "Assembler.hpp"
 #include "instruction.hpp"
 
+void logSemanticError(std::string message, int ppLine, int defLine, int oLine){
+	std::cout << "Assembler Semantic Error: " << message << ", in line {pp: " << ppLine << ", definition: " << defLine << ", source: " << oLine << ")\n";
+}
+
+void logSemanticError(std::string message){
+	std::cout << "Assembler Semantic Error: " << message << "\n";
+}
+
+void logSyntaxError(std::string message, int ppLine, int defLine, int oLine){
+	std::cout << "Assembler Syntax Error: " << message << ", in line {pp: " << ppLine << ", definition: " << defLine << ", source: " << oLine << ")\n";
+}
+
+void logInternalError(int ppLine, int defLine, int oLine){
+	std::cout << "Assembler Internal Error: It should not have happened, in line {pp: " << ppLine << ", definition: " << defLine << ", source: " << oLine << ")\n";
+}
+
 static std::map<std::string, Instruction> instructionMap = {
 	{"add", Instruction("add", 1, 2, 1, {READ})},
 	{"sub", Instruction("sub", 2, 2, 1, {READ})},
@@ -28,6 +44,7 @@ SymbolTable Assembler::generateSymbolTable(std::list<Statement> lstmt){
 	bool textHappened = false;
 	bool dataHappened = false;
 	int address = 0;
+	int lineNumber = 1;
 
 	text_start = 0;
 	text_end = -1;
@@ -39,7 +56,7 @@ SymbolTable Assembler::generateSymbolTable(std::list<Statement> lstmt){
 			Symbol s;
 			s.value = address;
 			if(ts.symbolExist(it.label)){
-				std::cout << "Semantic Error: Redefined label \"" << it.label << "\", in line " << it.lineNumber << "\n";
+				logSemanticError("Redefined label \"" + it.label + "\"", lineNumber, it.lineDefinition, it.lineNumber);
 			}
 			ts.insert(it.label, s);
 		}
@@ -53,7 +70,7 @@ SymbolTable Assembler::generateSymbolTable(std::list<Statement> lstmt){
 				if(it.countArgs() == 1 && it.arg[0].op == NONE){
 					if(it.arg[0].op1 == "text"){
 						if(textHappened){
-							std::cout << "Semantic Error: Multiple TEXT sections defined, in line " << it.lineNumber << "\n";
+							logSemanticError("Multiple TEXT sections defined", lineNumber, it.lineDefinition, it.lineNumber);
 						}
 						if(dataHappened){
 							data_end = address-1;
@@ -63,7 +80,7 @@ SymbolTable Assembler::generateSymbolTable(std::list<Statement> lstmt){
 					}
 					else if(it.arg[0].op1 == "data"){
 						if(dataHappened){
-							std::cout << "Semantic Error: Multiple DATA sections defined, in line " << it.lineNumber << "\n";
+							logSemanticError("Multiple DATA sections defined", lineNumber, it.lineDefinition, it.lineNumber);
 						}
 						if(textHappened){
 							text_end = address-1;
@@ -72,14 +89,14 @@ SymbolTable Assembler::generateSymbolTable(std::list<Statement> lstmt){
 						dataHappened = true;
 					}
 					else {
-						std::cout << "Syntax Error: invalid argument for section: \"" << it.arg[0].op1 << "\", in line " << it.lineNumber << "\n";
+						logSyntaxError("invalid argument for section: \"" + it.arg[0].op1 + "\"", lineNumber, it.lineDefinition, it.lineNumber);
 					}
 				}
 				if(it.countArgs() != 1) {
-					std::cout << "Syntax Error: wrong number of arguments, in line " << it.lineNumber << "\n";
+					logSyntaxError("wrong number of arguments", lineNumber, it.lineDefinition, it.lineNumber);
 				}
 				if(it.arg[0].op != NONE) {
-					std::cout << "Syntax Error: sum expression not supported for section directive, in line " << it.lineNumber << "\n";
+					logSyntaxError("sum expression not supported for section directive", lineNumber, it.lineDefinition, it.lineNumber);
 				}
 			}
 			else if(it.op == "space"){
@@ -96,10 +113,10 @@ SymbolTable Assembler::generateSymbolTable(std::list<Statement> lstmt){
 						address += 1;
 					break;
 					case EVAL_UNARY_ERROR_CONVERTION:
-						std::cout << "Syntax Error: invalid argument expected integer, in line " << it.lineNumber << "\n";
+						logSyntaxError("invalid argument expected integer", lineNumber, it.lineDefinition, it.lineNumber);
 					break;
 					case EVAL_UNARY_ERROR_NOT_UNARY:
-						std::cout << "Syntax Error: argument can't be evaluated on space directive, in line " << it.lineNumber << "\n";
+						logSyntaxError("argument can't be evaluated on space directive", lineNumber, it.lineDefinition, it.lineNumber);
 					break;
 				}
 			}
@@ -108,9 +125,12 @@ SymbolTable Assembler::generateSymbolTable(std::list<Statement> lstmt){
 				address += 1;
 			}
 			else {
-				std::cout << "Semantic Error: \"" << it.op << "\" directive or instruction invalid, in line: " << it.lineNumber << "\n";
+				logSemanticError("\"" + it.op + "\" directive or instruction invalid", lineNumber, it.lineDefinition, it.lineNumber);
 			}
 		}
+		
+		lineNumber++;
+		
 	}
 
 	if(text_end == -1){
@@ -122,7 +142,7 @@ SymbolTable Assembler::generateSymbolTable(std::list<Statement> lstmt){
 	}
 
 	if(!textHappened){
-		std::cout << "Semantic Error: no TEXT section\n";
+		logSemanticError("Semantic Error: no TEXT section");
 	}
 	return ts;
 }
@@ -138,6 +158,7 @@ bool Assembler::validReadAddress(long int arg){
 std::string Assembler::generateObjectCode(SymbolTable ts, std::list<Statement> lstmt){
 	std::string out;
 	int address = 0;
+	int lineNumber = 1;
 
 	for(Statement &it : lstmt){
 
@@ -145,7 +166,7 @@ std::string Assembler::generateObjectCode(SymbolTable ts, std::list<Statement> l
 		if(instructionMap.count(it.op) > 0){
 
 			if(!(address >= text_start && address <= text_end)){
-				std::cout << "Semantic Error: Invalid section, instruction out of TEXT section, in line " << it.lineNumber << "\n";
+				logSemanticError("Invalid section, instruction out of TEXT section", lineNumber, it.lineDefinition, it.lineNumber);
 			}
 
 			Instruction in = instructionMap[it.op];
@@ -159,36 +180,36 @@ std::string Assembler::generateObjectCode(SymbolTable ts, std::list<Statement> l
 					switch(it.arg[i].eval(ts, &arg)){
 						case EVAL_OK:
 							if(it.op == "div" && arg == 0){
-								std::cout << "Syntax Error: Division by zero, in line " << it.lineNumber << "\n";
+								logSyntaxError("Division by zero", lineNumber, it.lineDefinition, it.lineNumber);
 							}
 							if(in.access[i] == WRITE && !validDataAddress(arg)){
-								std::cout << "Semantic Error: Modify readonly (const) address is not allowed, in line " << it.lineNumber << "\n";
+								logSemanticError("Modify readonly (const) address is not allowed", lineNumber, it.lineDefinition, it.lineNumber);
 							}
 							if(in.access[i] == READ && !validReadAddress(arg)){
-								std::cout << "Semantic Error: Access to forbidden address, in line " << it.lineNumber << "\n";
+								logSemanticError("Access to forbidden address", lineNumber, it.lineDefinition, it.lineNumber);
 							}
 							if(it.op == "jmp" || it.op == "jmpn" || it.op == "jmpp" || it.op == "jmpz"){
 								if(!(arg >= text_start && arg <= text_end)){
-									std::cout << "Semantic Error: Jump out of TEXT section, in line " << it.lineNumber << "\n";
+									logSemanticError("Jump out of TEXT section", lineNumber, it.lineDefinition, it.lineNumber);
 								}
 							}
 							out += std::to_string(arg) + " ";
 						break;
 						case EVAL_ERROR_CONVERTION:
-							std::cout << "Syntax Error: Expected integer, label given as second operand in line " << it.lineNumber << "\n";
+							logSyntaxError("Expected integer, label given as second operand", lineNumber, it.lineDefinition, it.lineNumber);
 						break;
 						case EVAL_ERROR_EMPTY:
-							std::cout << "Internal Error: it should not happend\n";
+							logInternalError(lineNumber, it.lineDefinition, it.lineNumber);
 						break;
 						case EVAL_ERROR_SYMBOL_NOT_FOUND:
-							std::cout << "Semantic Error: Symbol \"" << it.arg[i].op1 << "\" not defined, in line " << it.lineNumber << "\n";
+							logSemanticError("Symbol \"" + it.arg[i].op1 + "\" not defined", lineNumber, it.lineDefinition, it.lineNumber);
 						break;
 					}
 				}
 
 			}
 			else {
-				std::cout << "Syntax Error: \"" << it.op << "\" requires " << in.nargs << " arguments, " << nargs_stmt << " given, in line " << it.lineNumber << "\n";
+				logSyntaxError("\"" + it.op + "\" requires " + std::to_string(in.nargs) + " arguments, " + std::to_string(nargs_stmt) + " given", lineNumber, it.lineDefinition, it.lineNumber);
 			}
 		}
 		// Directive
@@ -197,7 +218,7 @@ std::string Assembler::generateObjectCode(SymbolTable ts, std::list<Statement> l
 
 			else if(it.op == "space"){
 				if(!(address >= data_start && address <= data_end)){
-					std::cout << "Semantic Error: Invalid section, instruction out of DATA section, in line " << it.lineNumber << "\n";
+					logSemanticError("Invalid section, instruction out of DATA section", lineNumber, it.lineDefinition, it.lineNumber);
 				}
 				long int nspaces;
 				switch(it.arg[0].evalUnary(&nspaces)){
@@ -216,7 +237,7 @@ std::string Assembler::generateObjectCode(SymbolTable ts, std::list<Statement> l
 			}
 			else if(it.op == "const"){
 				if(!(address >= data_start && address <= data_end)){
-					std::cout << "Semantic Error: Invalid section, instruction out of DATA section, in line " << it.lineNumber << "\n";
+					logSemanticError("Invalid section, instruction out of DATA section", lineNumber, it.lineDefinition, it.lineNumber);
 				}
 				address += 1;
 
@@ -227,25 +248,28 @@ std::string Assembler::generateObjectCode(SymbolTable ts, std::list<Statement> l
 							out += std::to_string(value) + " ";
 						break;
 						case EVAL_UNARY_ERROR_EMPTY:
-							std::cout << "Internal Error: it should not happend\n";
+							logInternalError(lineNumber, it.lineDefinition, it.lineNumber);
 						break;
 						case EVAL_UNARY_ERROR_CONVERTION:
-							std::cout << "Syntax Error: invalid argument expected integer, in line " << it.lineNumber << "\n";
+							logSyntaxError("invalid argument expected integer", lineNumber, it.lineDefinition, it.lineNumber);
 						break;
 						case EVAL_UNARY_ERROR_NOT_UNARY:
-							std::cout << "Syntax Error: argument can't be evaluated on const directive, in line " << it.lineNumber << "\n";
+							logSyntaxError("argument can't be evaluated on const directive", lineNumber, it.lineDefinition, it.lineNumber);
 						break;
 					}
 				}
 				if(it.countArgs() != 1) {
-					std::cout << "Syntax Error: wrong number of arguments, in line " << it.lineNumber << "\n";
+					logSyntaxError("wrong number of arguments", lineNumber, it.lineDefinition, it.lineNumber);
 				}
 				if(it.arg[0].op != NONE) {
-					std::cout << "Syntax Error: sum expression not supported for const directive, in line " << it.lineNumber << "\n";
+					logSyntaxError("sum expression not supported for const directive", lineNumber, it.lineDefinition, it.lineNumber);
 				}
 
 			}
 		}
+		
+		lineNumber++;
+		
 	}
 
 	return out;

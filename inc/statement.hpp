@@ -49,6 +49,7 @@ class Statement {
 	Expression arg[3];
 	std::string comment;
 	int lineNumber;
+	int lineDefinition;
 	int countArgs();
 	Statement subst(SymbolTable);
 	void print();
