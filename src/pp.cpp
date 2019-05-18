@@ -164,7 +164,7 @@ void PreProcessor::renderStatements(std::list<Statement> statements){
 	}
 	
 	if(state == MACRO){
-		std::cout << "PreProcessor Sintax Error: Missing ENDMACRO directive\n";
+		std::cout << "PreProcessor Sintax Error: Missing END directive\n";
 	}
 }
 
