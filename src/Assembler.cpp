@@ -5,22 +5,7 @@
 #include "statement.hpp"
 #include "Assembler.hpp"
 #include "instruction.hpp"
-
-void logSemanticError(std::string message, int ppLine, int defLine, int oLine){
-	std::cout << "Assembler Semantic Error: " << message << ", in line {pp: " << ppLine << ", definition: " << defLine << ", source: " << oLine << "}\n";
-}
-
-void logSemanticError(std::string message){
-	std::cout << "Assembler Semantic Error: " << message << "\n";
-}
-
-void logSyntaxError(std::string message, int ppLine, int defLine, int oLine){
-	std::cout << "Assembler Syntax Error: " << message << ", in line {pp: " << ppLine << ", definition: " << defLine << ", source: " << oLine << "}\n";
-}
-
-void logInternalError(int ppLine, int defLine, int oLine){
-	std::cout << "Assembler Internal Error: It should not have happened, in line {pp: " << ppLine << ", definition: " << defLine << ", source: " << oLine << "}\n";
-}
+#include "log.hpp"
 
 static std::map<std::string, Instruction> instructionMap = {
 	{"add", Instruction("add", 1, 2, 1, {READ})},
