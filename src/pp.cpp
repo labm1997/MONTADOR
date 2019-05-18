@@ -120,8 +120,22 @@ void PreProcessor::dAPPEND(Statement stmt){
 }
 
 void PreProcessor::renderStatements(std::list<Statement> statements){
-	
+	SymbolTable vts;
+
+
 	for(Statement &it: statements){
+
+		// Add empty symbol to vts table, only to see if there's redefined symbol
+		if(!it.label.empty()){
+			if(vts.symbolExist(it.label)){
+				std::cout << "PreProcessor Semantic Error: Symbol \"" << it.label << "\" redefined, in line " << it.lineNumber << "\n";
+			}
+			else {
+				Symbol ns;
+				vts.insert(it.label, ns);
+			}
+		}
+
 		switch(state){
 			case NORMAL:
 				if(it.op == "equ") this->dEQU(it);

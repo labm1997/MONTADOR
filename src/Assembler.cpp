@@ -7,7 +7,7 @@
 #include "instruction.hpp"
 
 void logSemanticError(std::string message, int ppLine, int defLine, int oLine){
-	std::cout << "Assembler Semantic Error: " << message << ", in line {pp: " << ppLine << ", definition: " << defLine << ", source: " << oLine << ")\n";
+	std::cout << "Assembler Semantic Error: " << message << ", in line {pp: " << ppLine << ", definition: " << defLine << ", source: " << oLine << "}\n";
 }
 
 void logSemanticError(std::string message){
@@ -15,11 +15,11 @@ void logSemanticError(std::string message){
 }
 
 void logSyntaxError(std::string message, int ppLine, int defLine, int oLine){
-	std::cout << "Assembler Syntax Error: " << message << ", in line {pp: " << ppLine << ", definition: " << defLine << ", source: " << oLine << ")\n";
+	std::cout << "Assembler Syntax Error: " << message << ", in line {pp: " << ppLine << ", definition: " << defLine << ", source: " << oLine << "}\n";
 }
 
 void logInternalError(int ppLine, int defLine, int oLine){
-	std::cout << "Assembler Internal Error: It should not have happened, in line {pp: " << ppLine << ", definition: " << defLine << ", source: " << oLine << ")\n";
+	std::cout << "Assembler Internal Error: It should not have happened, in line {pp: " << ppLine << ", definition: " << defLine << ", source: " << oLine << "}\n";
 }
 
 static std::map<std::string, Instruction> instructionMap = {
@@ -39,239 +39,294 @@ static std::map<std::string, Instruction> instructionMap = {
 	{"stop", Instruction("stop", 14, 1, 0, {NON})}
 };
 
+void Assembler::addLabel(SymbolTable *ts, Statement it){
+	Symbol s;
+	s.value = this->address;
+	if(ts->symbolExist(it.label)){
+		logSemanticError("Using \"" + it.label + "\" from this line from now on", this->lineNumber, it.lineDefinition, it.lineNumber);
+	}
+	ts->insert(it.label, s);
+}
+
+int Assembler::dSECTION(Statement it){
+	if(it.countArgs() == 1 && it.arg[0].op == NONE){
+		if(it.arg[0].op1 == "text"){
+			if(this->text_start != -1){
+				logSemanticError("Multiple TEXT sections defined", this->lineNumber, it.lineDefinition, it.lineNumber);
+			}
+			if(this->data_start != -1){
+				this->data_end = this->address-1;
+			}
+			this->text_start = this->address;
+		}
+		else if(it.arg[0].op1 == "data"){
+			if(this->data_start != -1){
+				logSemanticError("Multiple DATA sections defined", this->lineNumber, it.lineDefinition, it.lineNumber);
+			}
+			if(this->text_start != -1){
+				this->text_end = this->address-1;
+			}
+			this->data_start = this->address;
+		}
+		else {
+			logSyntaxError("invalid argument for section: \"" + it.arg[0].op1 + "\"", this->lineNumber, it.lineDefinition, it.lineNumber);
+		}
+	}
+	if(it.countArgs() != 1) {
+		logSyntaxError("wrong number of arguments", this->lineNumber, it.lineDefinition, it.lineNumber);
+	}
+	if(it.arg[0].op != NONE) {
+		logSyntaxError("sum expression not supported for section directive", this->lineNumber, it.lineDefinition, it.lineNumber);
+	}
+	return 0;
+}
+
+int Assembler::dSPACE(Statement it){
+	long int nspaces;
+	int ret = 0;
+	switch(it.arg[0].evalUnary(&nspaces)){
+		case EVAL_UNARY_OK:
+			for(int i=0 ; i < nspaces ; i++){
+				this->dataAddress.push_back(this->address+i);
+			}
+			ret = nspaces;
+		break;
+		case EVAL_UNARY_ERROR_EMPTY:
+			this->dataAddress.push_back(this->address);
+			ret = 1;
+		break;
+		case EVAL_UNARY_ERROR_CONVERTION:
+			logSyntaxError("invalid argument expected integer", this->lineNumber, it.lineDefinition, it.lineNumber);
+		break;
+		case EVAL_UNARY_ERROR_NOT_UNARY:
+			logSyntaxError("argument can't be evaluated on space directive", this->lineNumber, it.lineDefinition, it.lineNumber);
+		break;
+	}
+	return ret;
+}
+
+int Assembler::dCONST(){
+	this->readAddress.push_back(this->address);
+	return 1;
+}
+
 SymbolTable Assembler::generateSymbolTable(std::list<Statement> lstmt){
 	SymbolTable ts;
-	bool textHappened = false;
-	bool dataHappened = false;
-	int address = 0;
-	int lineNumber = 1;
 
-	text_start = 0;
-	text_end = -1;
-	data_start = 0;
-	data_end = -1;
+	// Initial line and address conditions
+	this->address = 0;
+	this->lineNumber = 1;
+
+	// Initial text and data positions
+	this->text_start = -1;
+	this->text_end = -1;
+	this->data_start = -1;
+	this->data_end = -1;
 
 	for(Statement &it : lstmt){
-		if(!it.label.empty()){
-			Symbol s;
-			s.value = address;
-			if(ts.symbolExist(it.label)){
-				logSemanticError("Redefined label \"" + it.label + "\"", lineNumber, it.lineDefinition, it.lineNumber);
-			}
-			ts.insert(it.label, s);
-		}
-		// Instruction
-		if(instructionMap.count(it.op) > 0){
-			address += instructionMap[it.op].size;
-		}
-		// Directive
+
+		// Add label to symbol table
+		if(!it.label.empty()) this->addLabel(&ts, it);
+
+		// Calculate address step for instruction
+		if(instructionMap.count(it.op) > 0)
+			this->address += instructionMap[it.op].size;
+
+		// Calculate address step for section
 		else {
-			if(it.op == "section"){
-				if(it.countArgs() == 1 && it.arg[0].op == NONE){
-					if(it.arg[0].op1 == "text"){
-						if(textHappened){
-							logSemanticError("Multiple TEXT sections defined", lineNumber, it.lineDefinition, it.lineNumber);
-						}
-						if(dataHappened){
-							data_end = address-1;
-						}
-						text_start = address;
-						textHappened = true;
-					}
-					else if(it.arg[0].op1 == "data"){
-						if(dataHappened){
-							logSemanticError("Multiple DATA sections defined", lineNumber, it.lineDefinition, it.lineNumber);
-						}
-						if(textHappened){
-							text_end = address-1;
-						}
-						data_start = address;
-						dataHappened = true;
-					}
-					else {
-						logSyntaxError("invalid argument for section: \"" + it.arg[0].op1 + "\"", lineNumber, it.lineDefinition, it.lineNumber);
-					}
-				}
-				if(it.countArgs() != 1) {
-					logSyntaxError("wrong number of arguments", lineNumber, it.lineDefinition, it.lineNumber);
-				}
-				if(it.arg[0].op != NONE) {
-					logSyntaxError("sum expression not supported for section directive", lineNumber, it.lineDefinition, it.lineNumber);
-				}
-			}
-			else if(it.op == "space"){
-				long int nspaces;
-				switch(it.arg[0].evalUnary(&nspaces)){
-					case EVAL_UNARY_OK:
-						for(int i=0 ; i < nspaces ; i++){
-							dataAddress.push_back(address+i);
-						}
-						address += nspaces;
-					break;
-					case EVAL_UNARY_ERROR_EMPTY:
-						dataAddress.push_back(address);
-						address += 1;
-					break;
-					case EVAL_UNARY_ERROR_CONVERTION:
-						logSyntaxError("invalid argument expected integer", lineNumber, it.lineDefinition, it.lineNumber);
-					break;
-					case EVAL_UNARY_ERROR_NOT_UNARY:
-						logSyntaxError("argument can't be evaluated on space directive", lineNumber, it.lineDefinition, it.lineNumber);
-					break;
-				}
-			}
-			else if(it.op == "const"){
-				readAddress.push_back(address);
-				address += 1;
-			}
+			if(it.op == "section")
+				this->address += this->dSECTION(it);
+			else if(it.op == "space")
+				this->address += this->dSPACE(it);
+			else if(it.op == "const")
+				this->address += this->dCONST();
 			else {
-				logSemanticError("\"" + it.op + "\" directive or instruction invalid", lineNumber, it.lineDefinition, it.lineNumber);
+				logSemanticError("\"" + it.op + "\" directive or instruction invalid", this->lineNumber, it.lineDefinition, it.lineNumber);
 			}
 		}
-		
-		lineNumber++;
-		
+
+		this->lineNumber++;
+
 	}
 
-	if(text_end == -1){
-		text_end = address-1;
+	// TEXT end is EOF
+	if(this->text_end == -1){
+		this->text_end = this->address-1;
 	}
 
-	if(data_end == -1){
-		data_end = address-1;
+	// DATA end is EOF
+	if(this->data_end == -1){
+		this->data_end = this->address-1;
 	}
 
-	if(!textHappened){
+	// no TEXT segment
+	if(this->text_start == -1){
 		logSemanticError("Semantic Error: no TEXT section");
 	}
+
 	return ts;
 }
 
-bool Assembler::validDataAddress(long int arg){
+inline bool Assembler::validWriteAddress(long int arg){
 	return std::find(dataAddress.begin(), dataAddress.end(), arg) != dataAddress.end();
 }
 
-bool Assembler::validReadAddress(long int arg){
-	return (std::find(readAddress.begin(), readAddress.end(), arg) != readAddress.end()) || validDataAddress(arg);
+inline bool Assembler::validReadAddress(long int arg){
+	return (std::find(readAddress.begin(), readAddress.end(), arg) != readAddress.end()) || validWriteAddress(arg);
 }
 
-std::string Assembler::generateObjectCode(SymbolTable ts, std::list<Statement> lstmt){
+inline bool Assembler::validTextAddress(int address){
+	return (this->address >= this->text_start && this->address <= this->text_end);
+}
+
+inline bool Assembler::validDataAddress(int address){
+	return (this->address >= this->data_start && this->address <= this->data_end);
+}
+
+std::string Assembler::mINSTRUCTION(SymbolTable ts, Statement it){
 	std::string out;
-	int address = 0;
-	int lineNumber = 1;
+	Instruction in;
+	int nargs_stmt;
 
-	for(Statement &it : lstmt){
+	if(!this->validTextAddress(this->address)){
+		logSemanticError("Invalid section, instruction out of TEXT section", this->lineNumber, it.lineDefinition, it.lineNumber);
+	}
 
-		// Instruction
-		if(instructionMap.count(it.op) > 0){
+	in = instructionMap[it.op];
+	nargs_stmt = it.countArgs();
+	out += std::to_string(in.opcode) + " ";
+	this->address += instructionMap[it.op].size;
 
-			if(!(address >= text_start && address <= text_end)){
-				logSemanticError("Invalid section, instruction out of TEXT section", lineNumber, it.lineDefinition, it.lineNumber);
-			}
-
-			Instruction in = instructionMap[it.op];
-			int nargs_stmt = it.countArgs();
-			out += std::to_string(in.opcode) + " ";
-			address += instructionMap[it.op].size;
-
-			if(in.nargs == nargs_stmt){
-				for(int i = 0 ; i < nargs_stmt ; i++){
-					int arg;
-					switch(it.arg[i].eval(ts, &arg)){
-						case EVAL_OK:
-							if(it.op == "div" && arg == 0){
-								logSyntaxError("Division by zero", lineNumber, it.lineDefinition, it.lineNumber);
-							}
-							if(in.access[i] == WRITE && !validDataAddress(arg)){
-								logSemanticError("Modify readonly (const) address is not allowed", lineNumber, it.lineDefinition, it.lineNumber);
-							}
-							if(in.access[i] == READ && !validReadAddress(arg)){
-								logSemanticError("Access to forbidden address", lineNumber, it.lineDefinition, it.lineNumber);
-							}
-							if(it.op == "jmp" || it.op == "jmpn" || it.op == "jmpp" || it.op == "jmpz"){
-								if(!(arg >= text_start && arg <= text_end)){
-									logSemanticError("Jump out of TEXT section", lineNumber, it.lineDefinition, it.lineNumber);
-								}
-							}
-							out += std::to_string(arg) + " ";
-						break;
-						case EVAL_ERROR_CONVERTION:
-							logSyntaxError("Expected integer, label given as second operand", lineNumber, it.lineDefinition, it.lineNumber);
-						break;
-						case EVAL_ERROR_EMPTY:
-							logInternalError(lineNumber, it.lineDefinition, it.lineNumber);
-						break;
-						case EVAL_ERROR_SYMBOL_NOT_FOUND:
-							logSemanticError("Symbol \"" + it.arg[i].op1 + "\" not defined", lineNumber, it.lineDefinition, it.lineNumber);
-						break;
+	if(in.nargs == nargs_stmt){
+		for(int i = 0 ; i < nargs_stmt ; i++){
+			int arg;
+			switch(it.arg[i].eval(ts, &arg)){
+				case EVAL_OK:
+					// Avoid zero division
+					if(it.op == "div" && arg == 0){
+						logSyntaxError("Division by zero", this->lineNumber, it.lineDefinition, it.lineNumber);
 					}
-				}
-
-			}
-			else {
-				logSyntaxError("\"" + it.op + "\" requires " + std::to_string(in.nargs) + " arguments, " + std::to_string(nargs_stmt) + " given", lineNumber, it.lineDefinition, it.lineNumber);
+					// Avoid write to const address
+					if(in.access[i] == WRITE && !validWriteAddress(arg)){
+						logSemanticError("Modify readonly (const) address is not allowed", this->lineNumber, it.lineDefinition, it.lineNumber);
+					}
+					// Avoid read not allocated space
+					if(in.access[i] == READ && !validReadAddress(arg)){
+						logSemanticError("Access to forbidden address", this->lineNumber, it.lineDefinition, it.lineNumber);
+					}
+					// Avoid jump out of TEXT
+					if(it.op == "jmp" || it.op == "jmpn" || it.op == "jmpp" || it.op == "jmpz"){
+						if(!(arg >= text_start && arg <= text_end)){
+							logSemanticError("Jump out of TEXT section", this->lineNumber, it.lineDefinition, it.lineNumber);
+						}
+					}
+					out += std::to_string(arg) + " ";
+				break;
+				case EVAL_ERROR_CONVERTION:
+					logSyntaxError("Expected integer, label given as second operand", this->lineNumber, it.lineDefinition, it.lineNumber);
+				break;
+				case EVAL_ERROR_EMPTY:
+					logInternalError(lineNumber, it.lineDefinition, it.lineNumber);
+				break;
+				case EVAL_ERROR_SYMBOL_NOT_FOUND:
+					logSemanticError("Symbol \"" + it.arg[i].op1 + "\" not defined", this->lineNumber, it.lineDefinition, it.lineNumber);
+				break;
 			}
 		}
-		// Directive
-		else {
-			if(it.op == "section");
 
-			else if(it.op == "space"){
-				if(!(address >= data_start && address <= data_end)){
-					logSemanticError("Invalid section, instruction out of DATA section", lineNumber, it.lineDefinition, it.lineNumber);
-				}
-				long int nspaces;
-				switch(it.arg[0].evalUnary(&nspaces)){
-					case EVAL_UNARY_OK:
-						for(int i=0 ; i < nspaces ; i++) out += "00 ";
-						address += nspaces;
-					break;
-					case EVAL_UNARY_ERROR_EMPTY:
-						out += "00 ";
-						address += 1;
-					break;
-					default:
-
-					break;
-				}
-			}
-			else if(it.op == "const"){
-				if(!(address >= data_start && address <= data_end)){
-					logSemanticError("Invalid section, instruction out of DATA section", lineNumber, it.lineDefinition, it.lineNumber);
-				}
-				address += 1;
-
-				if(it.countArgs() == 1 && it.arg[0].op == NONE){
-					long int value;
-					switch(it.arg[0].evalUnary(&value)){
-						case EVAL_UNARY_OK:
-							out += std::to_string(value) + " ";
-						break;
-						case EVAL_UNARY_ERROR_EMPTY:
-							logInternalError(lineNumber, it.lineDefinition, it.lineNumber);
-						break;
-						case EVAL_UNARY_ERROR_CONVERTION:
-							logSyntaxError("invalid argument expected integer", lineNumber, it.lineDefinition, it.lineNumber);
-						break;
-						case EVAL_UNARY_ERROR_NOT_UNARY:
-							logSyntaxError("argument can't be evaluated on const directive", lineNumber, it.lineDefinition, it.lineNumber);
-						break;
-					}
-				}
-				if(it.countArgs() != 1) {
-					logSyntaxError("wrong number of arguments", lineNumber, it.lineDefinition, it.lineNumber);
-				}
-				if(it.arg[0].op != NONE) {
-					logSyntaxError("sum expression not supported for const directive", lineNumber, it.lineDefinition, it.lineNumber);
-				}
-
-			}
-		}
-		
-		lineNumber++;
-		
+	}
+	else {
+		logSyntaxError("\"" + it.op + "\" requires " + std::to_string(in.nargs) + " arguments, " + std::to_string(nargs_stmt) + " given", this->lineNumber, it.lineDefinition, it.lineNumber);
 	}
 
 	return out;
 }
 
+std::string Assembler::mSPACE(Statement it){
+	long int nspaces;
+	std::string out;
+
+	if(!this->validDataAddress(this->address)){
+		logSemanticError("Invalid section, instruction out of DATA section", this->lineNumber, it.lineDefinition, it.lineNumber);
+	}
+
+	switch(it.arg[0].evalUnary(&nspaces)){
+		case EVAL_UNARY_OK:
+			for(int i=0 ; i < nspaces ; i++) out += "00 ";
+			this->address += nspaces;
+		break;
+		case EVAL_UNARY_ERROR_EMPTY:
+			out += "00 ";
+			this->address += 1;
+		break;
+		default:
+
+		break;
+	}
+
+	return out;
+}
+
+std::string Assembler::mCONST(Statement it){
+	std::string out;
+
+	if(!this->validDataAddress(this->address)){
+		logSemanticError("Invalid section, instruction out of DATA section", this->lineNumber, it.lineDefinition, it.lineNumber);
+	}
+
+	this->address += 1;
+
+	if(it.countArgs() == 1 && it.arg[0].op == NONE){
+		long int value;
+
+		switch(it.arg[0].evalUnary(&value)){
+			case EVAL_UNARY_OK:
+				out += std::to_string(value) + " ";
+			break;
+			case EVAL_UNARY_ERROR_EMPTY:
+				logInternalError(this->lineNumber, it.lineDefinition, it.lineNumber);
+			break;
+			case EVAL_UNARY_ERROR_CONVERTION:
+				logSyntaxError("invalid argument expected integer", this->lineNumber, it.lineDefinition, it.lineNumber);
+			break;
+			case EVAL_UNARY_ERROR_NOT_UNARY:
+				logSyntaxError("argument can't be evaluated on const directive", this->lineNumber, it.lineDefinition, it.lineNumber);
+			break;
+		}
+	}
+	if(it.countArgs() != 1) {
+		logSyntaxError("wrong number of arguments", this->lineNumber, it.lineDefinition, it.lineNumber);
+	}
+	if(it.arg[0].op != NONE) {
+		logSyntaxError("sum expression not supported for const directive", this->lineNumber, it.lineDefinition, it.lineNumber);
+	}
+
+	return out;
+}
+
+std::string Assembler::generateObjectCode(SymbolTable ts, std::list<Statement> lstmt){
+	std::string out;
+
+	this->address = 0;
+	this->lineNumber = 1;
+
+	for(Statement &it : lstmt){
+
+		// Instruction rendering
+		if(instructionMap.count(it.op) > 0)
+			out += this->mINSTRUCTION(ts, it);
+		// Directive
+		else {
+			if(it.op == "section");
+			else if(it.op == "space")
+				out += this->mSPACE(it);
+			else if(it.op == "const")
+				out += this->mCONST(it);
+		}
+		
+		this->lineNumber++;
+		
+	}
+
+	return out;
+}

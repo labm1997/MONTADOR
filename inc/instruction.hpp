@@ -16,8 +16,6 @@ class Instruction {
 	int size;
 	int opcode;
 	int nargs;
-	bool accessData;
-	bool modifyData;
 	dataAccess access[3];
 	Instruction(std::string, int, int, int, std::initializer_list<dataAccess>);
 	Instruction() { };

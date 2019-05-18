@@ -7,7 +7,6 @@
 class Symbol {
 	public:
 	int value;
-	bool readOnly;
 	std::string str;
 	static bool checkLabel(std::string);
 };
