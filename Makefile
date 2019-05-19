@@ -1,6 +1,6 @@
 # Project folders
 
-BINDIR=bin
+#BINDIR=bin
 OBJDIR=obj
 SRCDIR=src
 INCDIR=inc
@@ -18,10 +18,10 @@ SOURCES=$(shell find $(SRCDIR) -name *.cpp)
 OBJECTS=$(patsubst $(SRCDIR)/%.cpp,$(OBJDIR)/%.o,$(SOURCES))
 
 # Linked binary
-BINARY=$(BINDIR)/montador
+BINARY=tradutor
 
 # Rule to make linked binary, depends on all .o and on bin folder
-$(BINARY): $(OBJECTS) | $(BINDIR)
+$(BINARY): $(OBJECTS)
 	$(CC) $^ -o $@ $(CFLAGS)
 
 install: $(BINARY)
@@ -39,9 +39,9 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp | Makefile $(OBJDIR)
 	@$(CC) $(CFLAGS) -MM $< >> $(OBJDIR)/$*.d
 
 # Rule to create folders
-$(BINDIR) $(OBJDIR):
+$(OBJDIR):
 	mkdir $@
 
 # Remove all generated files
 clean: 
-	rm -rf $(OBJDIR) $(BINDIR)
+	rm -rf $(OBJDIR) $(BINARY)

@@ -2,11 +2,6 @@
 #include <iostream>
 #include <string>
 
-#define UI_BOLD_RED_BACK_RED "\x1B[1;37;41m"
-#define UI_BOLD_RED "\x1B[1;31m"
-#define UI_BOLD "\x1B[1m"
-#define UI_NORMAL  "\x1B[0m"
-
 void logPrintLines(int ppLine, int defLine, int oLine){
 	std::cout << "\tin line " << UI_BOLD << ppLine << UI_NORMAL << " on preprocessed file\n";
 	if(defLine != oLine) std::cout << "\tdefined in line " << UI_BOLD << defLine << UI_NORMAL << " on source file\n";

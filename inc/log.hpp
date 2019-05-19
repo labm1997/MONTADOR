@@ -5,12 +5,10 @@
 #include <iostream>
 #include <string>
 
+#define UI_BOLD_RED_BACK_RED "\x1B[1;37;41m"
 #define UI_BOLD_RED "\x1B[1;31m"
 #define UI_BOLD "\x1B[1m"
-#define UI_BOLD_RED_BACK_RED "\x1B[1;37;41m"
 #define UI_NORMAL  "\x1B[0m"
-#define UI_YELLOW "\x1B[33m"
-#define UI_BGGRAY "\x1B[47m"
 
 void logPrintLines(int ppLine, int defLine, int oLine);
 
